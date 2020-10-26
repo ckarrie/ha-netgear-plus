@@ -99,7 +99,7 @@ def get_switch_infos(switch_ip, switch_password):
     sample_time = end_time - start_time
     sample_factor = 1 / sample_time
 
-    print("It took us " + str(sample_time) + " seconds.")
+    #print("It took us " + str(sample_time) + " seconds.")
     ports = min([len(tx1), len(tx2)])
 
     # Test code, print all values.
@@ -107,7 +107,7 @@ def get_switch_infos(switch_ip, switch_password):
         # Convert Hex to Int, get bytes traffic
         port_traffic = int(tx2[i].text, 10) - int(tx1[i].text, 10)
         port_speed_bps = port_traffic * sample_factor
-        print("Port " + str(i) + ": " + "{0:.2f}".format(port_speed_bps/1024, ) + "kb/s.", tx2[i].text, "-", tx1[i].text)
+        #print("Port " + str(i) + ": " + "{0:.2f}".format(port_speed_bps/1024, ) + "kb/s.", tx2[i].text, "-", tx1[i].text)
 
     ports_data = []
 
