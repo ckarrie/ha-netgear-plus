@@ -1,0 +1,1 @@
+"""The Netgear component"""

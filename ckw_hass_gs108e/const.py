@@ -1,0 +1,4 @@
+DOMAIN = 'ckw_hass_gs108e'
+DEFAULT_PASSWORD = 'password'
+SCAN_INTERVAL = 10
+TIMEOUT = 2
