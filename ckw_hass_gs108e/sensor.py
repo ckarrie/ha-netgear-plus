@@ -31,7 +31,7 @@ ATTR_PORT_BYTES_SENT = "traffic_tx_bytes"
 ATTR_PORT_SPEED_TX = "speed_rx_bytes"
 ATTR_PORT_SPEED_RX = "speed_tx_bytes"
 
-MIN_TIME_BETWEEN_UPDATES = timedelta(seconds=10)
+MIN_TIME_BETWEEN_UPDATES = timedelta(seconds=20)
 
 STATE_ONLINE = "online"
 STATE_OFFLINE = "offline"
@@ -129,4 +129,7 @@ class NetgearMonitorSensor(Entity):
         except RequestException as err:
             self._state = STATE_UNAVAILABLE
             _LOGGER.warning("Could not reach Netgear: %s", err)
+
+        except (ValueError, TypeError):
+            self._state = STATE_UNAVAILABLE
 
