@@ -104,14 +104,22 @@ class NetgearMonitorSensor(Entity):
         # Don't return attributes if FritzBox is unreachable
         if self._state == STATE_UNAVAILABLE:
             return {}
-        return {
+        attributes = {
             ATTR_INTERNAL_IP: self._host,
             ATTR_BYTES_SENT: self._bytes_sent,
             ATTR_BYTES_RECEIVED: self._bytes_received,
             ATTR_TRANSMISSION_RATE_UP: self._transmission_rate_up,
             ATTR_TRANSMISSION_RATE_DOWN: self._transmission_rate_down,
-            ATTR_PORTS: self._ports,
+            ATTR_PORTS: len(self._ports),
         }
+
+        for port in self._ports[:]:
+            port_nr = port.pop('port_nr')
+            for k, v in port.items():
+                attr_keyname = '{}_{}_{}'.format(ATTR_PORTS, port_nr, k)
+                attributes[attr_keyname] = v
+
+        return attributes
 
     @Throttle(MIN_TIME_BETWEEN_UPDATES)
     def update(self):
