@@ -135,6 +135,18 @@ def get_switch_infos(switch_ip, switch_password):
         #    "CRC Errors", port_traffic_crc_err
         #)
 
+        # Lowpass-Filter
+        if port_traffic_rx < 0:
+            port_traffic_rx = 0
+        if port_traffic_tx < 0:
+            port_traffic_tx = 0
+        if port_traffic_crc_err < 0:
+            port_traffic_crc_err = 0
+        if port_speed_bps_rx < 0:
+            port_speed_bps_rx = 0
+        if port_speed_bps_tx < 0:
+            port_speed_bps_tx = 0
+
         sum_port_traffic_rx += port_traffic_rx
         sum_port_traffic_tx += port_traffic_tx
         sum_port_traffic_crc_err += port_traffic_crc_err
