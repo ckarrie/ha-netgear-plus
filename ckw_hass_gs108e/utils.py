@@ -159,6 +159,7 @@ def get_switch_infos(switch_ip, switch_password):
             'traffic_tx_bytes': port_traffic_tx,
             'speed_rx_bytes': port_speed_bps_rx,
             'speed_tx_bytes': port_speed_bps_tx,
+            'speed_io_bytes': port_speed_bps_rx + port_speed_bps_tx,
             'crc_errors': port_traffic_crc_err,
         })
 
@@ -171,6 +172,7 @@ def get_switch_infos(switch_ip, switch_password):
         'sum_port_traffic_crc_err': sum_port_traffic_crc_err,
         'sum_port_speed_bps_rx': sum_port_speed_bps_rx,
         'sum_port_speed_bps_tx': sum_port_speed_bps_tx,
+        'sum_port_speed_bps_io': sum_port_speed_bps_rx + sum_port_speed_bps_tx,
     }
 
 

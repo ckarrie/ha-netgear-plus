@@ -22,6 +22,7 @@ ATTR_BYTES_RECEIVED = "bytes_received"
 ATTR_BYTES_SENT = "bytes_sent"
 ATTR_TRANSMISSION_RATE_UP = "transmission_rate_up"
 ATTR_TRANSMISSION_RATE_DOWN = "transmission_rate_down"
+ATTR_TRANSMISSION_RATE_IO = "transmission_rate_io"
 ATTR_INTERNAL_IP = "internal_ip"
 ATTR_PORTS = "ports"
 
@@ -80,6 +81,7 @@ class NetgearMonitorSensor(Entity):
         self._bytes_sent = self._bytes_received = None
         self._transmission_rate_up = None
         self._transmission_rate_down = None
+        self._transmission_rate_io = None
         self._ports = []
         self._crc_errors = None
 
@@ -110,6 +112,7 @@ class NetgearMonitorSensor(Entity):
             ATTR_BYTES_RECEIVED: self._bytes_received,
             ATTR_TRANSMISSION_RATE_UP: self._transmission_rate_up,
             ATTR_TRANSMISSION_RATE_DOWN: self._transmission_rate_down,
+            ATTR_TRANSMISSION_RATE_IO: self._transmission_rate_io,
             ATTR_PORTS: len(self._ports),
         }
 
@@ -131,6 +134,7 @@ class NetgearMonitorSensor(Entity):
             self._bytes_received = self._switch_infos.get('sum_port_traffic_rx')
             self._transmission_rate_up = self._switch_infos.get('sum_port_speed_bps_tx')
             self._transmission_rate_down = self._switch_infos.get('sum_port_speed_bps_rx')
+            self._transmission_rate_io = self._switch_infos.get('sum_port_speed_bps_io')
             self._ports = self._switch_infos.get('ports', [])
             self._state = STATE_ONLINE
 
