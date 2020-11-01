@@ -117,10 +117,11 @@ class NetgearMonitorSensor(Entity):
         }
 
         for port in self._ports[:]:
-            port_nr = port.pop('port_nr')
-            for k, v in port.items():
-                attr_keyname = '{}_{}_{}'.format(ATTR_PORTS, port_nr, k)
-                attributes[attr_keyname] = v
+            port_nr = port.pop('port_nr', None)
+            if port_nr is not None:
+                for k, v in port.items():
+                    attr_keyname = '{}_{}_{}'.format(ATTR_PORTS, port_nr, k)
+                    attributes[attr_keyname] = v
 
         return attributes
 
