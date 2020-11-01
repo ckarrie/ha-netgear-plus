@@ -32,7 +32,7 @@ ATTR_PORT_BYTES_SENT = "traffic_tx_bytes"
 ATTR_PORT_SPEED_TX = "speed_rx_bytes"
 ATTR_PORT_SPEED_RX = "speed_tx_bytes"
 
-MIN_TIME_BETWEEN_UPDATES = timedelta(seconds=20)
+MIN_TIME_BETWEEN_UPDATES = timedelta(seconds=60)
 
 STATE_ONLINE = "online"
 STATE_OFFLINE = "offline"
