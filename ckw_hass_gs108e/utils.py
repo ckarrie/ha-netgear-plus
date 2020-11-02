@@ -75,7 +75,10 @@ def get_switch_infos(switch_ip, switch_password):
 
     # Get the port stats page
     url = 'http://' + switch_ip + '/portStatistics.cgi'
-    page = requests.get(url, cookies=jar)
+    try:
+        page = requests.get(url, cookies=jar, timeout=15.000)
+    except requests.exceptions.Timeout:
+        return None
     start_time = time.perf_counter()
     tree = html.fromstring(page.content)
 
@@ -88,7 +91,10 @@ def get_switch_infos(switch_ip, switch_password):
     time.sleep(sleep_time)
 
     # Get the port stats page again! We need to compare two points in time
-    page = requests.get(url, cookies=jar)
+    try:
+        page = requests.get(url, cookies=jar, timeout=15.000)
+    except requests.exceptions.Timeout:
+        return None
     end_time = time.perf_counter()
     tree = html.fromstring(page.content)
 

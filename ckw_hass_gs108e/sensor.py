@@ -130,14 +130,23 @@ class NetgearMonitorSensor(Entity):
         """Retrieve information from the FritzBox."""
         try:
             self._switch_infos = get_switch_infos(switch_ip=self._host, switch_password=self._password)
-            self._internal_ip = self._host
-            self._bytes_sent = self._switch_infos.get('sum_port_traffic_tx')
-            self._bytes_received = self._switch_infos.get('sum_port_traffic_rx')
-            self._transmission_rate_up = self._switch_infos.get('sum_port_speed_bps_tx')
-            self._transmission_rate_down = self._switch_infos.get('sum_port_speed_bps_rx')
-            self._transmission_rate_io = self._switch_infos.get('sum_port_speed_bps_io')
-            self._ports = self._switch_infos.get('ports', [])
-            self._state = STATE_ONLINE
+            if self._switch_infos:
+                self._internal_ip = self._host
+                self._bytes_sent = self._switch_infos.get('sum_port_traffic_tx')
+                self._bytes_received = self._switch_infos.get('sum_port_traffic_rx')
+                self._transmission_rate_up = self._switch_infos.get('sum_port_speed_bps_tx')
+                self._transmission_rate_down = self._switch_infos.get('sum_port_speed_bps_rx')
+                self._transmission_rate_io = self._switch_infos.get('sum_port_speed_bps_io')
+                self._ports = self._switch_infos.get('ports', [])
+                self._state = STATE_ONLINE
+            else:
+                self._bytes_sent = 0
+                self._bytes_received = 0
+                self._transmission_rate_up = 0
+                self._transmission_rate_down = 0
+                self._transmission_rate_io = 0
+                self._ports = []
+                self._state = STATE_UNAVAILABLE
 
         except RequestException as err:
             self._state = STATE_UNAVAILABLE
