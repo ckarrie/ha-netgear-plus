@@ -14,7 +14,7 @@ sensor:
     name: GS108Ev4 Werkstatt
 ```
 
-Converting to bytes/s to MB/s
+Converting bytes/s to MB/s
 
 ```
 sensor:
