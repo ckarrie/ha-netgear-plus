@@ -14,7 +14,7 @@ sensor:
     name: GS108Ev4 Werkstatt
 ```
 
-Converting to MB/s
+Converting to bytes/s to MB/s
 
 ```
 sensor:
@@ -51,7 +51,7 @@ sensor:
         unit_of_measurement: 'MB/s'
         value_template: "{{ state_attr('sensor.gs108ev4_scheune','transmission_rate_down') | float / 1000000 }}"
       ...   
-      Ports:  
+      # Ports:  
       ...    
       t_gs108ev3_werkstatt_down_p1_mb:
         friendly_name: "Port 1"
