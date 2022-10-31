@@ -1,7 +1,17 @@
 # ckw-ha-gs108e
 HomeAssistant Netgear Switch Integration
 
-*configuration.yaml:*
+## What it does
+Grabs statistical network data from your Netgear GS108Ev4
+
+## How to integrate in your HomeAssistant
+Edit your *configuration.yaml*, each *platform: ckw_hass_gs108e* section represents a Switch instance.
+
+Configuration options:
+
+  *host*: IP of Netgear Switch
+  *name*: Name of Switch (your choice)
+
 
 ```
 sensor:
@@ -14,7 +24,11 @@ sensor:
     name: GS108Ev4 Werkstatt
 ```
 
-Converting bytes/s to MB/s
+## Examples
+
+### Converting bytes/s to MB/s
+
+The Switch gives us bytes/s, if we want MB/s we have to create a template sensor in *configuration.yaml*:
 
 ```
 sensor:
