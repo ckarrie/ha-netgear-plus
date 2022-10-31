@@ -4,7 +4,7 @@ HomeAssistant Netgear Switch Integration
 ## What it does
 Grabs statistical network data from your Netgear GS108Ev4
 
-## Wthat statistics
+## Which statistics
 - overall Switch statistics as attributes
   - `switch_ip` - IP of the Switch
   - `response_time_s` - Response time of two requests send to the Switch to calculate the traffic speed
