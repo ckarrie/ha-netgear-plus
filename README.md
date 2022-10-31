@@ -9,8 +9,8 @@ Edit your *configuration.yaml*, each *platform: ckw_hass_gs108e* section represe
 
 Configuration options:
 
-  *host*: IP of Netgear Switch
-  *name*: Name of Switch (your choice)
+- *host*: IP of Netgear Switch
+- *name*: Name of Switch (your choice)
 
 
 ```
