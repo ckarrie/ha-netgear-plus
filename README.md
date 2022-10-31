@@ -4,6 +4,27 @@ HomeAssistant Netgear Switch Integration
 ## What it does
 Grabs statistical network data from your Netgear GS108Ev4
 
+## Wthat statistics
+- overall Switch statistics as attributes
+  - `switch_ip` - IP of the Switch
+  - `response_time_s` - Response time of two requests send to the Switch to calculate the traffic speed
+  - `sum_port_traffic_rx` - Received traffic (sum all ports)
+  - `sum_port_traffic_tx` - Transferred traffic (sum all ports)
+  - `sum_port_traffic_crc_err` - CRC Errors (sum all ports)
+  - `sum_port_speed_bps_rx` - Received traffic speed (bit/s)
+  - `sum_port_speed_bps_rx` - Transferred traffic speed (bit/s)
+  - `sum_port_speed_bps_io` - Received and transferred traffic speed 
+  - `ports` - List of statistics for each Switch port
+- statistics for each Port (8 Ports for GS108Ev4) as attributes
+  - `port_nr`
+  - `traffic_rx_bytes`
+  - `traffic_tx_bytes`
+  - `speed_rx_bytes`
+  - `speed_tx_bytes`
+  - `speed_io_bytes`
+  - `crc_errors`
+
+
 ## How to integrate in your HomeAssistant
 Edit your *configuration.yaml*, each *platform: ckw_hass_gs108e* section represents a Switch instance.
 
@@ -11,13 +32,14 @@ Configuration options:
 
 - *host*: IP of Netgear Switch
 - *name*: Name of Switch (your choice)
-
+- *password*: Admin-Password for the Web UI (default: admin)
 
 ```
 sensor:
   - platform: ckw_hass_gs108e
     host: 192.168.178.34
     name: GS108Ev4 Buero
+    password: admin
 
   - platform: ckw_hass_gs108e
     host: 192.168.178.35
