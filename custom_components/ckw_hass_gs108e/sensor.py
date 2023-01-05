@@ -1,157 +1,489 @@
-"""Support for monitoring a Netgear Switch."""
-from datetime import timedelta
+"""Support for Netgear routers."""
+from __future__ import annotations
+
+from collections.abc import Callable
+from dataclasses import dataclass
+from datetime import date, datetime
+from decimal import Decimal
 import logging
 
-from .utils import get_switch_infos
-from requests.exceptions import RequestException
-import voluptuous as vol
+from homeassistant.components.sensor import (
+    RestoreSensor,
+    SensorDeviceClass,
+    SensorEntity,
+    SensorEntityDescription,
+    SensorStateClass,
+)
+from homeassistant.config_entries import ConfigEntry
+from homeassistant.const import (
+    PERCENTAGE,
+    UnitOfDataRate,
+    UnitOfInformation,
+    UnitOfTime,
+)
+from homeassistant.core import HomeAssistant, callback
+from homeassistant.helpers.entity import EntityCategory
+from homeassistant.helpers.entity_platform import AddEntitiesCallback
+from homeassistant.helpers.typing import StateType
+from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
 
-from homeassistant.components.sensor import PLATFORM_SCHEMA
-from homeassistant.const import CONF_HOST, CONF_NAME, STATE_UNAVAILABLE, CONF_PASSWORD
-import homeassistant.helpers.config_validation as cv
-from homeassistant.helpers.entity import Entity
-from homeassistant.util import Throttle
+from .const import (
+    DOMAIN,
+    KEY_COORDINATOR_SWITCH_INFOS,
+    KEY_SWITCH,
+)
+from .netgear_switch import HAGS108Switch, HAGS108SwitchCoordinatorEntity
 
 _LOGGER = logging.getLogger(__name__)
 
-CONF_DEFAULT_NAME = "ckw_hass_gs108e"
-CONF_DEFAULT_IP = "169.254.1.1"  # This IP is valid for all FRITZ!Box routers.
-CONF_DEFAULT_PASSWORD = "password"
-
-ATTR_BYTES_RECEIVED = "bytes_received"
-ATTR_BYTES_SENT = "bytes_sent"
-ATTR_TRANSMISSION_RATE_UP = "transmission_rate_up"
-ATTR_TRANSMISSION_RATE_DOWN = "transmission_rate_down"
-ATTR_TRANSMISSION_RATE_IO = "transmission_rate_io"
-ATTR_INTERNAL_IP = "internal_ip"
-ATTR_PORTS = "ports"
-
-ATTR_PORT_NR = "port_nr"
-ATTR_PORT_BYTES_RECEIVED = "traffic_rx_bytes"
-ATTR_PORT_BYTES_SENT = "traffic_tx_bytes"
-ATTR_PORT_SPEED_TX = "speed_rx_bytes"
-ATTR_PORT_SPEED_RX = "speed_tx_bytes"
-
-MIN_TIME_BETWEEN_UPDATES = timedelta(seconds=60)
-
-STATE_ONLINE = "online"
-STATE_OFFLINE = "offline"
-
-ICON = "mdi:switch"
-
-PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend(
-    {
-        vol.Optional(CONF_NAME, default=CONF_DEFAULT_NAME): cv.string,
-        vol.Optional(CONF_HOST, default=CONF_DEFAULT_IP): cv.string,
-        vol.Optional(CONF_PASSWORD, default=CONF_DEFAULT_PASSWORD): cv.string,
-    }
-)
+SENSOR_TYPES = {
+    "link_rate": SensorEntityDescription(
+        key="link_rate",
+        name="link rate",
+        native_unit_of_measurement="Mbps",
+        entity_category=EntityCategory.DIAGNOSTIC,
+        icon="mdi:speedometer",
+    ),
+}
 
 
-def setup_platform(hass, config, add_entities, discovery_info=None):
-    """Set up the FRITZ!Box monitor sensors."""
-    name = config.get(CONF_NAME)
-    host = config.get(CONF_HOST)
-    password = config.get(CONF_PASSWORD)
+@dataclass
+class NetgearSensorEntityDescription(SensorEntityDescription):
+    """Class describing Netgear sensor entities."""
 
-    try:
-        switch_infos = get_switch_infos(switch_ip=host, switch_password=password)
-    except (ValueError, TypeError):
-        switch_infos = None
-
-    if switch_infos is None:
-        _LOGGER.error("Failed to establish connection to Netgear Switch: %s", host)
-        return 1
-    _LOGGER.info("Successfully connected to Netgear")
-
-    add_entities([NetgearMonitorSensor(name, host, password)], True)
+    value: Callable = lambda data: data
+    index: int = 0
 
 
-class NetgearMonitorSensor(Entity):
-    """Implementation of a fritzbox monitor sensor."""
+DEVICE_SENSOR_TYPES = [
+    NetgearSensorEntityDescription(
+        key="switch_ip",
+        name="IP Address",
+        entity_category=EntityCategory.DIAGNOSTIC,
+        native_unit_of_measurement=None,
+        device_class=None,
+        icon="mdi:switch",
+    ),
+    NetgearSensorEntityDescription(
+        key="response_time_s",
+        name="Response Time (seconds)",
+        entity_category=EntityCategory.DIAGNOSTIC,
+        native_unit_of_measurement=UnitOfTime.SECONDS,
+        device_class=SensorDeviceClass.DURATION,
+        icon="mdi:clock",
+    ),
+    
+    #NetgearSensorEntityDescription(
+    #    key="NewOOKLADownlinkBandwidth",
+    #    name="Downlink Bandwidth",
+    #    entity_category=EntityCategory.DIAGNOSTIC,
+    #    native_unit_of_measurement=UnitOfDataRate.MEGABITS_PER_SECOND,
+    #    device_class=SensorDeviceClass.DATA_RATE,
+    #    icon="mdi:download",
+    #),
+]
 
-    def __init__(self, name, host, password):
-        """Initialize the sensor."""
-        self._name = name
-        self._host = host
-        self._password = password
-        self._switch_infos = {}
-        self._state = STATE_UNAVAILABLE
-        self._internal_ip = None
-        self._bytes_sent = self._bytes_received = None
-        self._transmission_rate_up = None
-        self._transmission_rate_down = None
-        self._transmission_rate_io = None
-        self._ports = []
-        self._crc_errors = None
+PORT_SENSORS = [
+    NetgearSensorEntityDescription(
+        key="port_1_traffic_rx_bytes",
+        name="Port 1 Traffic Received",
+        entity_category=EntityCategory.DIAGNOSTIC,
+        native_unit_of_measurement=UnitOfInformation.BYTES,
+        device_class=SensorDeviceClass.DATA_SIZE,
+        icon="mdi:download",
+    ),
+    NetgearSensorEntityDescription(
+        key="port_1_traffic_tx_bytes",
+        name="Port 1 Traffic Transferred",
+        entity_category=EntityCategory.DIAGNOSTIC,
+        native_unit_of_measurement=UnitOfInformation.BYTES,
+        device_class=SensorDeviceClass.DATA_SIZE,
+        icon="mdi:upload",
+    ),
+    NetgearSensorEntityDescription(
+        key="port_1_speed_rx_bytes",
+        name="Port 1 Receiving",
+        entity_category=EntityCategory.DIAGNOSTIC,
+        native_unit_of_measurement=UnitOfDataRate.BYTES_PER_SECOND,
+        device_class=SensorDeviceClass.DATA_RATE,
+        icon="mdi:download",
+    ),
+    NetgearSensorEntityDescription(
+        key="port_1_speed_tx_bytes",
+        name="Port 1 Transferring",
+        entity_category=EntityCategory.DIAGNOSTIC,
+        native_unit_of_measurement=UnitOfDataRate.BYTES_PER_SECOND,
+        device_class=SensorDeviceClass.DATA_RATE,
+        icon="mdi:upload",
+    ),
+    NetgearSensorEntityDescription(
+        key="port_1_speed_io_bytes",
+        name="Port 1 IO",
+        entity_category=EntityCategory.DIAGNOSTIC,
+        native_unit_of_measurement=UnitOfDataRate.BYTES_PER_SECOND,
+        device_class=SensorDeviceClass.DATA_RATE,
+        icon="mdi:swap-vertical",
+    ),
+    NetgearSensorEntityDescription(
+        key="port_2_traffic_rx_bytes",
+        name="Port 2 Traffic Received",
+        entity_category=EntityCategory.DIAGNOSTIC,
+        native_unit_of_measurement=UnitOfInformation.BYTES,
+        device_class=SensorDeviceClass.DATA_SIZE,
+        icon="mdi:download",
+    ),
+    NetgearSensorEntityDescription(
+        key="port_2_traffic_tx_bytes",
+        name="Port 2 Traffic Transferred",
+        entity_category=EntityCategory.DIAGNOSTIC,
+        native_unit_of_measurement=UnitOfInformation.BYTES,
+        device_class=SensorDeviceClass.DATA_SIZE,
+        icon="mdi:upload",
+    ),
+    NetgearSensorEntityDescription(
+        key="port_2_speed_rx_bytes",
+        name="Port 2 Receiving",
+        entity_category=EntityCategory.DIAGNOSTIC,
+        native_unit_of_measurement=UnitOfDataRate.BYTES_PER_SECOND,
+        device_class=SensorDeviceClass.DATA_RATE,
+        icon="mdi:download",
+    ),
+    NetgearSensorEntityDescription(
+        key="port_2_speed_tx_bytes",
+        name="Port 2 Transferring",
+        entity_category=EntityCategory.DIAGNOSTIC,
+        native_unit_of_measurement=UnitOfDataRate.BYTES_PER_SECOND,
+        device_class=SensorDeviceClass.DATA_RATE,
+        icon="mdi:upload",
+    ),
+    NetgearSensorEntityDescription(
+        key="port_2_speed_io_bytes",
+        name="Port 2 IO",
+        entity_category=EntityCategory.DIAGNOSTIC,
+        native_unit_of_measurement=UnitOfDataRate.BYTES_PER_SECOND,
+        device_class=SensorDeviceClass.DATA_RATE,
+        icon="mdi:swap-vertical",
+    ),
+    NetgearSensorEntityDescription(
+        key="port_3_traffic_rx_bytes",
+        name="Port 3 Traffic Received",
+        entity_category=EntityCategory.DIAGNOSTIC,
+        native_unit_of_measurement=UnitOfInformation.BYTES,
+        device_class=SensorDeviceClass.DATA_SIZE,
+        icon="mdi:download",
+    ),
+    NetgearSensorEntityDescription(
+        key="port_3_traffic_tx_bytes",
+        name="Port 3 Traffic Transferred",
+        entity_category=EntityCategory.DIAGNOSTIC,
+        native_unit_of_measurement=UnitOfInformation.BYTES,
+        device_class=SensorDeviceClass.DATA_SIZE,
+        icon="mdi:upload",
+    ),
+    NetgearSensorEntityDescription(
+        key="port_3_speed_rx_bytes",
+        name="Port 3 Receiving",
+        entity_category=EntityCategory.DIAGNOSTIC,
+        native_unit_of_measurement=UnitOfDataRate.BYTES_PER_SECOND,
+        device_class=SensorDeviceClass.DATA_RATE,
+        icon="mdi:download",
+    ),
+    NetgearSensorEntityDescription(
+        key="port_3_speed_tx_bytes",
+        name="Port 3 Transferring",
+        entity_category=EntityCategory.DIAGNOSTIC,
+        native_unit_of_measurement=UnitOfDataRate.BYTES_PER_SECOND,
+        device_class=SensorDeviceClass.DATA_RATE,
+        icon="mdi:upload",
+    ),
+    NetgearSensorEntityDescription(
+        key="port_3_speed_io_bytes",
+        name="Port 3 IO",
+        entity_category=EntityCategory.DIAGNOSTIC,
+        native_unit_of_measurement=UnitOfDataRate.BYTES_PER_SECOND,
+        device_class=SensorDeviceClass.DATA_RATE,
+        icon="mdi:swap-vertical",
+    ),
+    NetgearSensorEntityDescription(
+        key="port_4_traffic_rx_bytes",
+        name="Port 4 Traffic Received",
+        entity_category=EntityCategory.DIAGNOSTIC,
+        native_unit_of_measurement=UnitOfInformation.BYTES,
+        device_class=SensorDeviceClass.DATA_SIZE,
+        icon="mdi:download",
+    ),
+    NetgearSensorEntityDescription(
+        key="port_4_traffic_tx_bytes",
+        name="Port 4 Traffic Transferred",
+        entity_category=EntityCategory.DIAGNOSTIC,
+        native_unit_of_measurement=UnitOfInformation.BYTES,
+        device_class=SensorDeviceClass.DATA_SIZE,
+        icon="mdi:upload",
+    ),
+    NetgearSensorEntityDescription(
+        key="port_4_speed_rx_bytes",
+        name="Port 4 Receiving",
+        entity_category=EntityCategory.DIAGNOSTIC,
+        native_unit_of_measurement=UnitOfDataRate.BYTES_PER_SECOND,
+        device_class=SensorDeviceClass.DATA_RATE,
+        icon="mdi:download",
+    ),
+    NetgearSensorEntityDescription(
+        key="port_4_speed_tx_bytes",
+        name="Port 4 Transferring",
+        entity_category=EntityCategory.DIAGNOSTIC,
+        native_unit_of_measurement=UnitOfDataRate.BYTES_PER_SECOND,
+        device_class=SensorDeviceClass.DATA_RATE,
+        icon="mdi:upload",
+    ),
+    NetgearSensorEntityDescription(
+        key="port_4_speed_io_bytes",
+        name="Port 4 IO",
+        entity_category=EntityCategory.DIAGNOSTIC,
+        native_unit_of_measurement=UnitOfDataRate.BYTES_PER_SECOND,
+        device_class=SensorDeviceClass.DATA_RATE,
+        icon="mdi:swap-vertical",
+    ),
+    NetgearSensorEntityDescription(
+        key="port_5_traffic_rx_bytes",
+        name="Port 5 Traffic Received",
+        entity_category=EntityCategory.DIAGNOSTIC,
+        native_unit_of_measurement=UnitOfInformation.BYTES,
+        device_class=SensorDeviceClass.DATA_SIZE,
+        icon="mdi:download",
+    ),
+    NetgearSensorEntityDescription(
+        key="port_5_traffic_tx_bytes",
+        name="Port 5 Traffic Transferred",
+        entity_category=EntityCategory.DIAGNOSTIC,
+        native_unit_of_measurement=UnitOfInformation.BYTES,
+        device_class=SensorDeviceClass.DATA_SIZE,
+        icon="mdi:upload",
+    ),
+    NetgearSensorEntityDescription(
+        key="port_5_speed_rx_bytes",
+        name="Port 5 Receiving",
+        entity_category=EntityCategory.DIAGNOSTIC,
+        native_unit_of_measurement=UnitOfDataRate.BYTES_PER_SECOND,
+        device_class=SensorDeviceClass.DATA_RATE,
+        icon="mdi:download",
+    ),
+    NetgearSensorEntityDescription(
+        key="port_5_speed_tx_bytes",
+        name="Port 5 Transferring",
+        entity_category=EntityCategory.DIAGNOSTIC,
+        native_unit_of_measurement=UnitOfDataRate.BYTES_PER_SECOND,
+        device_class=SensorDeviceClass.DATA_RATE,
+        icon="mdi:upload",
+    ),
+    NetgearSensorEntityDescription(
+        key="port_5_speed_io_bytes",
+        name="Port 5 IO",
+        entity_category=EntityCategory.DIAGNOSTIC,
+        native_unit_of_measurement=UnitOfDataRate.BYTES_PER_SECOND,
+        device_class=SensorDeviceClass.DATA_RATE,
+        icon="mdi:swap-vertical",
+    ),
+    NetgearSensorEntityDescription(
+        key="port_6_traffic_rx_bytes",
+        name="Port 6 Traffic Received",
+        entity_category=EntityCategory.DIAGNOSTIC,
+        native_unit_of_measurement=UnitOfInformation.BYTES,
+        device_class=SensorDeviceClass.DATA_SIZE,
+        icon="mdi:download",
+    ),
+    NetgearSensorEntityDescription(
+        key="port_6_traffic_tx_bytes",
+        name="Port 6 Traffic Transferred",
+        entity_category=EntityCategory.DIAGNOSTIC,
+        native_unit_of_measurement=UnitOfInformation.BYTES,
+        device_class=SensorDeviceClass.DATA_SIZE,
+        icon="mdi:upload",
+    ),
+    NetgearSensorEntityDescription(
+        key="port_6_speed_rx_bytes",
+        name="Port 6 Receiving",
+        entity_category=EntityCategory.DIAGNOSTIC,
+        native_unit_of_measurement=UnitOfDataRate.BYTES_PER_SECOND,
+        device_class=SensorDeviceClass.DATA_RATE,
+        icon="mdi:download",
+    ),
+    NetgearSensorEntityDescription(
+        key="port_6_speed_tx_bytes",
+        name="Port 6 Transferring",
+        entity_category=EntityCategory.DIAGNOSTIC,
+        native_unit_of_measurement=UnitOfDataRate.BYTES_PER_SECOND,
+        device_class=SensorDeviceClass.DATA_RATE,
+        icon="mdi:upload",
+    ),
+    NetgearSensorEntityDescription(
+        key="port_6_speed_io_bytes",
+        name="Port 6 IO",
+        entity_category=EntityCategory.DIAGNOSTIC,
+        native_unit_of_measurement=UnitOfDataRate.BYTES_PER_SECOND,
+        device_class=SensorDeviceClass.DATA_RATE,
+        icon="mdi:swap-vertical",
+    ),
+    NetgearSensorEntityDescription(
+        key="port_7_traffic_rx_bytes",
+        name="Port 7 Traffic Received",
+        entity_category=EntityCategory.DIAGNOSTIC,
+        native_unit_of_measurement=UnitOfInformation.BYTES,
+        device_class=SensorDeviceClass.DATA_SIZE,
+        icon="mdi:download",
+    ),
+    NetgearSensorEntityDescription(
+        key="port_7_traffic_tx_bytes",
+        name="Port 7 Traffic Transferred",
+        entity_category=EntityCategory.DIAGNOSTIC,
+        native_unit_of_measurement=UnitOfInformation.BYTES,
+        device_class=SensorDeviceClass.DATA_SIZE,
+        icon="mdi:upload",
+    ),
+    NetgearSensorEntityDescription(
+        key="port_7_speed_rx_bytes",
+        name="Port 7 Receiving",
+        entity_category=EntityCategory.DIAGNOSTIC,
+        native_unit_of_measurement=UnitOfDataRate.BYTES_PER_SECOND,
+        device_class=SensorDeviceClass.DATA_RATE,
+        icon="mdi:download",
+    ),
+    NetgearSensorEntityDescription(
+        key="port_7_speed_tx_bytes",
+        name="Port 7 Transferring",
+        entity_category=EntityCategory.DIAGNOSTIC,
+        native_unit_of_measurement=UnitOfDataRate.BYTES_PER_SECOND,
+        device_class=SensorDeviceClass.DATA_RATE,
+        icon="mdi:upload",
+    ),
+    NetgearSensorEntityDescription(
+        key="port_7_speed_io_bytes",
+        name="Port 7 IO",
+        entity_category=EntityCategory.DIAGNOSTIC,
+        native_unit_of_measurement=UnitOfDataRate.BYTES_PER_SECOND,
+        device_class=SensorDeviceClass.DATA_RATE,
+        icon="mdi:swap-vertical",
+    ),
+    NetgearSensorEntityDescription(
+        key="port_8_traffic_rx_bytes",
+        name="Port 8 Traffic Received",
+        entity_category=EntityCategory.DIAGNOSTIC,
+        native_unit_of_measurement=UnitOfInformation.BYTES,
+        device_class=SensorDeviceClass.DATA_SIZE,
+        icon="mdi:download",
+    ),
+    NetgearSensorEntityDescription(
+        key="port_8_traffic_tx_bytes",
+        name="Port 8 Traffic Transferred",
+        entity_category=EntityCategory.DIAGNOSTIC,
+        native_unit_of_measurement=UnitOfInformation.BYTES,
+        device_class=SensorDeviceClass.DATA_SIZE,
+        icon="mdi:upload",
+    ),
+    NetgearSensorEntityDescription(
+        key="port_8_speed_rx_bytes",
+        name="Port 8 Receiving",
+        entity_category=EntityCategory.DIAGNOSTIC,
+        native_unit_of_measurement=UnitOfDataRate.BYTES_PER_SECOND,
+        device_class=SensorDeviceClass.DATA_RATE,
+        icon="mdi:download",
+    ),
+    NetgearSensorEntityDescription(
+        key="port_8_speed_tx_bytes",
+        name="Port 8 Transferring",
+        entity_category=EntityCategory.DIAGNOSTIC,
+        native_unit_of_measurement=UnitOfDataRate.BYTES_PER_SECOND,
+        device_class=SensorDeviceClass.DATA_RATE,
+        icon="mdi:upload",
+    ),
+    NetgearSensorEntityDescription(
+        key="port_8_speed_io_bytes",
+        name="Port 8 IO",
+        entity_category=EntityCategory.DIAGNOSTIC,
+        native_unit_of_measurement=UnitOfDataRate.BYTES_PER_SECOND,
+        device_class=SensorDeviceClass.DATA_RATE,
+        icon="mdi:swap-vertical",
+    ),
+]
+
+
+async def async_setup_entry(
+    hass: HomeAssistant, entry: ConfigEntry, async_add_entities: AddEntitiesCallback
+) -> None:
+    """Set up device tracker for Netgear component."""
+    gs_switch = hass.data[DOMAIN][entry.entry_id][KEY_SWITCH]
+    coordinator_switch_infos = hass.data[DOMAIN][entry.entry_id][KEY_COORDINATOR_SWITCH_INFOS]
+
+    # Router entities
+    switch_entities = []
+
+    for description in DEVICE_SENSOR_TYPES:
+        switch_entities.append(
+            NetgearRouterSensorEntity(coordinator_switch_infos, gs_switch, description)
+        )
+
+    for description in PORT_SENSORS:
+        switch_entities.append(
+            NetgearRouterSensorEntity(coordinator_switch_infos, gs_switch, description)
+        )
+
+    async_add_entities(switch_entities)
+
+    # Entities per network device
+    tracked = set()
+    sensors = ["link_rate"]
+
+    coordinator_switch_infos.data = True
+
+
+class NetgearRouterSensorEntity(HAGS108SwitchCoordinatorEntity, RestoreSensor):
+    """Representation of a device connected to a Netgear router."""
+
+    #_attr_entity_registry_enabled_default = False
+    entity_description: NetgearSensorEntityDescription
+
+    def __init__(
+        self,
+        coordinator: DataUpdateCoordinator,
+        switch: HAGS108Switch,
+        entity_description: NetgearSensorEntityDescription,
+    ) -> None:
+        """Initialize a Netgear device."""
+        super().__init__(coordinator, switch)
+        self.entity_description = entity_description
+        self._name = f"{switch.device_name} {entity_description.name}"
+        self._unique_id = f"{switch.unique_id}-{entity_description.key}-{entity_description.index}"
+
+        self._value: StateType | date | datetime | Decimal = None
+        self.async_update_device()
 
     @property
-    def name(self):
-        """Return the name of the sensor."""
-        return self._name.rstrip()
+    def native_value(self):
+        """Return the state of the sensor."""
+        return self._value
 
-    @property
-    def icon(self):
-        """Icon to use in the frontend, if any."""
-        return ICON
+    async def async_added_to_hass(self) -> None:
+        """Handle entity which will be added."""
+        await super().async_added_to_hass()
+        if self.coordinator.data is None:
+            sensor_data = await self.async_get_last_sensor_data()
+            if sensor_data is not None:
+                self._value = sensor_data.native_value
 
-    @property
-    def state(self):
-        """Return the state of the device."""
-        return self._state
+    @callback
+    def async_update_device(self) -> None:
+        """Update the Netgear device."""
+        if self.coordinator.data is None:
+            return
 
-    @property
-    def state_attributes(self):
-        """Return the device state attributes."""
-        # Don't return attributes if FritzBox is unreachable
-        if self._state == STATE_UNAVAILABLE:
-            return {}
-        attributes = {
-            ATTR_INTERNAL_IP: self._host,
-            ATTR_BYTES_SENT: self._bytes_sent,
-            ATTR_BYTES_RECEIVED: self._bytes_received,
-            ATTR_TRANSMISSION_RATE_UP: self._transmission_rate_up,
-            ATTR_TRANSMISSION_RATE_DOWN: self._transmission_rate_down,
-            ATTR_TRANSMISSION_RATE_IO: self._transmission_rate_io,
-            ATTR_PORTS: len(self._ports),
-        }
+        data = self.coordinator.data.get(self.entity_description.key)
+        if data is None:
+            self._value = None
+            _LOGGER.debug(
+                "key '%s' not in Netgear router response '%s'",
+                self.entity_description.key,
+                data,
+            )
+            return
 
-        for port in self._ports[:]:
-            port_nr = port.pop('port_nr', None)
-            if port_nr is not None:
-                for k, v in port.items():
-                    attr_keyname = '{}_{}_{}'.format(ATTR_PORTS, port_nr, k)
-                    attributes[attr_keyname] = v
-
-        return attributes
-
-    @Throttle(MIN_TIME_BETWEEN_UPDATES)
-    def update(self):
-        """Retrieve information from the FritzBox."""
-        try:
-            self._switch_infos = get_switch_infos(switch_ip=self._host, switch_password=self._password)
-            if self._switch_infos:
-                self._internal_ip = self._host
-                self._bytes_sent = self._switch_infos.get('sum_port_traffic_tx')
-                self._bytes_received = self._switch_infos.get('sum_port_traffic_rx')
-                self._transmission_rate_up = self._switch_infos.get('sum_port_speed_bps_tx')
-                self._transmission_rate_down = self._switch_infos.get('sum_port_speed_bps_rx')
-                self._transmission_rate_io = self._switch_infos.get('sum_port_speed_bps_io')
-                self._ports = self._switch_infos.get('ports', [])
-                self._state = STATE_ONLINE
-            else:
-                self._bytes_sent = 0
-                self._bytes_received = 0
-                self._transmission_rate_up = 0
-                self._transmission_rate_down = 0
-                self._transmission_rate_io = 0
-                self._ports = []
-                self._state = STATE_UNAVAILABLE
-
-        except RequestException as err:
-            self._state = STATE_UNAVAILABLE
-            _LOGGER.warning("Could not reach Netgear: %s", err)
-
-        except (ValueError, TypeError):
-            self._state = STATE_UNAVAILABLE
-
+        self._value = self.entity_description.value(data)
