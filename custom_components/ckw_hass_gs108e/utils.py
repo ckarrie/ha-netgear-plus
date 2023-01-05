@@ -1,12 +1,9 @@
-import tempfile
 import time
-from lxml import html
 import requests
-from pprint import pprint
-import socket
+from lxml import html
 
-cookie_dir = tempfile.gettempdir()
 sleep_time = 0.25
+cookies_by_switch = {}
 
 # Get login cookie
 # Parameters: (string) Switch IP, (strong) Switch Password
@@ -82,7 +79,6 @@ def get_switch_infos(switch_ip, switch_password):
     start_time = time.perf_counter()
     tree = html.fromstring(page.content)
 
-
     rx1 = tree.xpath('//tr[@class="portID"]/td[2]')
     tx1 = tree.xpath('//tr[@class="portID"]/td[3]')
     crc1 = tree.xpath('//tr[@class="portID"]/td[4]')
@@ -105,7 +101,7 @@ def get_switch_infos(switch_ip, switch_password):
     sample_time = end_time - start_time
     sample_factor = 1 / sample_time
 
-    #print("It took us " + str(sample_time) + " seconds.")
+    # print("It took us " + str(sample_time) + " seconds.")
     ports = min([len(tx1), len(tx2)])
 
     # Test code, print all values.
@@ -113,7 +109,7 @@ def get_switch_infos(switch_ip, switch_password):
         # Convert Hex to Int, get bytes traffic
         port_traffic = int(tx2[i].text, 10) - int(tx1[i].text, 10)
         port_speed_bps = port_traffic * sample_factor
-        #print("Port " + str(i) + ": " + "{0:.2f}".format(port_speed_bps/1024, ) + "kb/s.", tx2[i].text, "-", tx1[i].text)
+        # print("Port " + str(i) + ": " + "{0:.2f}".format(port_speed_bps/1024, ) + "kb/s.", tx2[i].text, "-", tx1[i].text)
 
     ports_data = []
 
@@ -134,12 +130,12 @@ def get_switch_infos(switch_ip, switch_password):
         port_speed_bps_tx = int(port_traffic_tx * sample_factor)
         port_name = "Port " + str(port_number)
 
-        #print(
+        # print(
         #    "Port", port_name,
         #    "Traffic In", port_speed_bps_rx,
         #    "Traffic Out", port_speed_bps_tx,
         #    "CRC Errors", port_traffic_crc_err
-        #)
+        # )
 
         # Lowpass-Filter
         if port_traffic_rx < 0:
@@ -181,18 +177,9 @@ def get_switch_infos(switch_ip, switch_password):
         'sum_port_speed_bps_io': sum_port_speed_bps_rx + sum_port_speed_bps_tx,
     }
 
-
-
-#if __name__ == "__main__":
+# if __name__ == "__main__":
 #    switch_ip = '192.168.178.35'
 #    switch_password = 'password'
 #    port_number = 0
 #    switch_infos = get_switch_infos(switch_ip=switch_ip, switch_password=switch_password)
 #    pprint(switch_infos)
-
-
-
-
-
-
-
