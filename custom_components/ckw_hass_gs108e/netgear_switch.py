@@ -105,13 +105,17 @@ class GS108Switch(object):
 
         # Port data
         ports = min([len(tx1), len(tx2)])
-        ports_data = []
 
         sum_port_traffic_rx = 0
         sum_port_traffic_tx = 0
         sum_port_traffic_crc_err = 0
         sum_port_speed_bps_rx = 0
         sum_port_speed_bps_tx = 0
+
+        switch_data = {
+            'switch_ip': self.host,
+            'response_time_s': sample_time,
+        }
 
         for port_number0 in range(ports):
             try:
@@ -121,7 +125,6 @@ class GS108Switch(object):
                 port_traffic_crc_err = int(crc2[port_number0].text, 10) - int(crc1[port_number0].text, 10)
                 port_speed_bps_rx = int(port_traffic_rx * sample_factor)
                 port_speed_bps_tx = int(port_traffic_tx * sample_factor)
-                port_name = "Port " + str(port_number)
             except IndexError:
                 print("IndexError at port_number0", port_number0)
                 continue
@@ -144,28 +147,20 @@ class GS108Switch(object):
             sum_port_speed_bps_rx += port_speed_bps_rx
             sum_port_speed_bps_tx += port_speed_bps_tx
 
-            ports_data.append({
-                'port_nr': port_number,
-                'port_name': port_name,
-                'traffic_rx_bytes': port_traffic_rx,
-                'traffic_tx_bytes': port_traffic_tx,
-                'speed_rx_bytes': port_speed_bps_rx,
-                'speed_tx_bytes': port_speed_bps_tx,
-                'speed_io_bytes': port_speed_bps_rx + port_speed_bps_tx,
-                'crc_errors': port_traffic_crc_err,
-            })
+            switch_data[f'port_{port_number}_traffic_rx_bytes'] = port_traffic_rx
+            switch_data[f'port_{port_number}_traffic_tx_bytes'] = port_traffic_tx
+            switch_data[f'port_{port_number}_speed_rx_bytes'] = port_speed_bps_rx
+            switch_data[f'port_{port_number}_speed_tx_bytes'] = port_speed_bps_tx
+            switch_data[f'port_{port_number}_speed_io_bytes'] = port_speed_bps_rx + port_speed_bps_tx
+            switch_data[f'port_{port_number}_crc_errors'] = port_traffic_crc_err
 
-        return {
-            'switch_ip': self.host,
-            'response_time_s': sample_time,
-            'ports': ports_data,
-            'sum_port_traffic_rx': sum_port_traffic_rx,
-            'sum_port_traffic_tx': sum_port_traffic_tx,
-            'sum_port_traffic_crc_err': sum_port_traffic_crc_err,
-            'sum_port_speed_bps_rx': sum_port_speed_bps_rx,
-            'sum_port_speed_bps_tx': sum_port_speed_bps_tx,
-            'sum_port_speed_bps_io': sum_port_speed_bps_rx + sum_port_speed_bps_tx,
-        }
+        switch_data['sum_port_traffic_rx'] = sum_port_traffic_rx
+        switch_data['sum_port_traffic_tx'] = sum_port_traffic_tx
+        switch_data['sum_port_traffic_crc_err'] = sum_port_traffic_crc_err
+        switch_data['sum_port_speed_bps_rx'] = sum_port_speed_bps_rx
+        switch_data['sum_port_speed_bps_tx'] = sum_port_speed_bps_tx
+        switch_data['sum_port_speed_bps_io'] = sum_port_speed_bps_rx + sum_port_speed_bps_tx
+        return switch_data
 
 
 def get_api(host: str, password: str) -> GS108Switch:
