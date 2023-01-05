@@ -2,7 +2,7 @@
 from datetime import timedelta
 import logging
 
-from .utils import get_switch_infos
+from .netgear_switch import HAGS108SwitchEntity, HAGS108Switch, HAGS108SwitchCoordinatorEntity
 from requests.exceptions import RequestException
 import voluptuous as vol
 
@@ -15,7 +15,7 @@ from homeassistant.util import Throttle
 _LOGGER = logging.getLogger(__name__)
 
 CONF_DEFAULT_NAME = "ckw_hass_gs108e"
-CONF_DEFAULT_IP = "169.254.1.1"  # This IP is valid for all FRITZ!Box routers.
+CONF_DEFAULT_IP = "169.254.1.1"
 CONF_DEFAULT_PASSWORD = "password"
 
 ATTR_BYTES_RECEIVED = "bytes_received"
