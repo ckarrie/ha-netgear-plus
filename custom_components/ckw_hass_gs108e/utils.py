@@ -47,24 +47,23 @@ def check_login_cookie_valid(switch_ip, cookie_name, cookie_content):
 
 
 def get_switch_infos(switch_ip, switch_password):
-    try:
-        f = open(cookie_dir + '/.gs108ecookie' + switch_ip, 'r')
-        switch_cookie_name = f.readline().rstrip('\n')
-        switch_cookie_content = f.readline().rstrip('\n')
-        f.close()
-        if check_login_cookie_valid(switch_ip, switch_cookie_name, switch_cookie_content) is False:
-            raise IOError
-    except IOError:
-        # File doesn't exist. Get login key
-        is_new_cookie = True
+    switch_cookie_name = None
+    switch_cookie_content = None
+    login_cookie_valid = False
+    cookie_by_switch = cookies_by_switch.get(switch_ip, None)
+    if cookie_by_switch:
+        switch_cookie_name = cookie_by_switch.get('name')
+        switch_cookie_content = cookie_by_switch.get('content')
+        login_cookie_valid = check_login_cookie_valid(switch_ip, switch_cookie_name, switch_cookie_content)
+
+    if not login_cookie_valid:
+        # Old Cookie / First run
         switch_cookie_name, switch_cookie_content = get_login_cookie(switch_ip, switch_password)
+        cookies_by_switch[switch_ip] = {'name': switch_cookie_name, 'content': switch_cookie_content}
+
         if switch_cookie_name is None:
+            print("Exiting, no switch_cookie_name", switch_cookie_name)
             exit(1)
-        f = open(cookie_dir + '/.gs108ecookie' + switch_ip, 'w')
-        f.write(switch_cookie_name + "\n")
-        f.write(switch_cookie_content + "\n")
-        f.write(time.strftime("%Y-%m-%d %H:%M:%S", time.gmtime()))
-        f.close()
 
     # Set up our cookie jar
     jar = requests.cookies.RequestsCookieJar()
@@ -123,12 +122,16 @@ def get_switch_infos(switch_ip, switch_password):
     sum_port_speed_bps_tx = 0
 
     for port_number in range(ports):
-        port_traffic_rx = int(rx2[port_number].text, 10) - int(rx1[port_number].text, 10)
-        port_traffic_tx = int(tx2[port_number].text, 10) - int(tx1[port_number].text, 10)
-        port_traffic_crc_err = int(crc2[port_number].text, 10) - int(crc1[port_number].text, 10)
-        port_speed_bps_rx = int(port_traffic_rx * sample_factor)
-        port_speed_bps_tx = int(port_traffic_tx * sample_factor)
-        port_name = "Port " + str(port_number)
+        try:
+            port_traffic_rx = int(rx2[port_number].text, 10) - int(rx1[port_number].text, 10)
+            port_traffic_tx = int(tx2[port_number].text, 10) - int(tx1[port_number].text, 10)
+            port_traffic_crc_err = int(crc2[port_number].text, 10) - int(crc1[port_number].text, 10)
+            port_speed_bps_rx = int(port_traffic_rx * sample_factor)
+            port_speed_bps_tx = int(port_traffic_tx * sample_factor)
+            port_name = "Port " + str(port_number)
+        except IndexError:
+            print("IndexError at port_number", port_number)
+            continue
 
         # print(
         #    "Port", port_name,
@@ -157,6 +160,7 @@ def get_switch_infos(switch_ip, switch_password):
 
         ports_data.append({
             'port_nr': port_number + 1,
+            'port_name': port_name,
             'traffic_rx_bytes': port_traffic_rx,
             'traffic_tx_bytes': port_traffic_tx,
             'speed_rx_bytes': port_speed_bps_rx,

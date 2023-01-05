@@ -1,3 +1,4 @@
 havenv/
 .idea/
-.pyc
+*.pyc
+__pycache__/

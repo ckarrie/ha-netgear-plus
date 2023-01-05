@@ -2,8 +2,8 @@
   "domain": "ckw_hass_gs108e",
   "name": "CKW GS108e Integration",
   "documentation": "https://github.com/home-assistant/example-custom-config/tree/master/custom_components/example_load_platform/",
-  "dependencies": [],
+  "dependencies": ["lxml", "requests"],
   "codeowners": [],
-  "requirements": [],
-  "version": "0.1.0"
+  "requirements": ["lxml>=4.6.1"],
+  "version": "0.2.0"
 }
