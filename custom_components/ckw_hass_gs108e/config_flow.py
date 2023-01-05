@@ -11,6 +11,7 @@ from homeassistant import config_entries
 from homeassistant.const import (
     CONF_HOST,
     CONF_PASSWORD,
+    CONF_TIMEOUT,
 )
 from homeassistant.core import callback
 from homeassistant.data_entry_flow import FlowResult
@@ -20,7 +21,7 @@ from .const import (
     DEFAULT_NAME,
     DOMAIN,
     DEFAULT_HOST,
-    DEFAULT_PASSWORD
+    DEFAULT_CONF_TIMEOUT,
 )
 from .errors import CannotLoginException
 from .netgear_switch import get_api
@@ -53,7 +54,14 @@ class OptionsFlowHandler(config_entries.OptionsFlow):
         if user_input is not None:
             return self.async_create_entry(title="", data=user_input)
 
-        settings_schema = vol.Schema()
+        settings_schema = vol.Schema(
+            {
+                vol.Optional(
+                    CONF_TIMEOUT,
+                    default=self.config_entry.options.get(CONF_TIMEOUT, DEFAULT_CONF_TIMEOUT.total_seconds()),  # CONF_TIMEOUT = 'timeout'
+                ): int,
+            }
+        )
 
         return self.async_show_form(step_id="init", data_schema=settings_schema)
 

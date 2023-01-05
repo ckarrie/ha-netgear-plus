@@ -243,7 +243,7 @@ class HAGS108SwitchCoordinatorEntity(CoordinatorEntity):
     def device_info(self) -> DeviceInfo:
         """Return the device information."""
         return DeviceInfo(
-            identifiers={(DOMAIN, self._router.unique_id)},
+            identifiers={(DOMAIN, self._switch.unique_id)},
         )
 
 
