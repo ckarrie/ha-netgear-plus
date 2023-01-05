@@ -5,7 +5,6 @@ import logging
 from typing import cast
 from urllib.parse import urlparse
 
-from const import DEFAULT_HOST, DEFAULT_USER, DEFAULT_PASSWORD
 import voluptuous as vol
 
 from homeassistant import config_entries
@@ -20,6 +19,8 @@ from homeassistant.util.network import is_ipv4_address
 from .const import (
     DEFAULT_NAME,
     DOMAIN,
+    DEFAULT_HOST,
+    DEFAULT_PASSWORD
 )
 from .errors import CannotLoginException
 from .netgear_switch import get_api

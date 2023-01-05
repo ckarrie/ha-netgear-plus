@@ -2,7 +2,6 @@
   "domain": "ckw_hass_gs108e",
   "name": "CKW GS108e Integration",
   "documentation": "https://github.com/home-assistant/example-custom-config/tree/master/custom_components/example_load_platform/",
-  "dependencies": ["lxml", "requests"],
   "config_flow": true,
   "iot_class": "local_polling",
   "codeowners": [],

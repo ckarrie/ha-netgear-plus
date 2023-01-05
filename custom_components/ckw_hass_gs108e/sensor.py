@@ -48,23 +48,22 @@ PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend(
 )
 
 
-def setup_platform(hass, config, add_entities, discovery_info=None):
-    """Set up the FRITZ!Box monitor sensors."""
-    name = config.get(CONF_NAME)
-    host = config.get(CONF_HOST)
-    password = config.get(CONF_PASSWORD)
+#def setup_platform(hass, config, add_entities, discovery_info=None):
+#    """Set up the FRITZ!Box monitor sensors."""
+#    name = config.get(CONF_NAME)
+#    host = config.get(CONF_HOST)
+#    password = config.get(CONF_PASSWORD)
+#
+#    try:
+#        switch_infos = get_switch_infos(switch_ip=host, switch_password=password)
+#    except (ValueError, TypeError):
+#        switch_infos = None
 
-    try:
-        switch_infos = get_switch_infos(switch_ip=host, switch_password=password)
-    except (ValueError, TypeError):
-        switch_infos = None
-
-    if switch_infos is None:
-        _LOGGER.error("Failed to establish connection to Netgear Switch: %s", host)
-        return 1
-    _LOGGER.info("Successfully connected to Netgear")
-
-    add_entities([NetgearMonitorSensor(name, host, password)], True)
+#    if switch_infos is None:
+#        _LOGGER.error("Failed to establish connection to Netgear Switch: %s", host)
+#        return 1
+#    _LOGGER.info("Successfully connected to Netgear")
+#    add_entities([NetgearMonitorSensor(name, host, password)], True)
 
 
 class NetgearMonitorSensor(Entity):
@@ -154,4 +153,7 @@ class NetgearMonitorSensor(Entity):
 
         except (ValueError, TypeError):
             self._state = STATE_UNAVAILABLE
+
+
+
 
