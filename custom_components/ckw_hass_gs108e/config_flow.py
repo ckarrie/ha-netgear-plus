@@ -30,7 +30,7 @@ _LOGGER = logging.getLogger(__name__)
 
 
 def _user_schema_with_defaults(user_input):
-    user_schema = {vol.Optional(CONF_HOST, default=user_input.get(CONF_HOST, "")): str}
+    user_schema = {vol.Required(CONF_HOST, default=user_input.get(CONF_HOST, "")): str}
     user_schema.update(_ordered_shared_schema(user_input))
 
     return vol.Schema(user_schema)
