@@ -20,6 +20,16 @@ class GS108Switch(object):
         self.cookie_content = None
         self.sleep_time = 0.25
         self.timeout = 15.000
+        self.ports = 8
+        self._previous_data = {
+            'tx': [0] * self.ports,
+            'rx': [0] * self.ports,
+            'crc': [0] * self.ports,
+        }
+        self._previous_timestamp = time.perf_counter()
+        self._loaded_switch_infos = False
+        self._client_hash = None
+        self._switch_bootloader = 'unknown'
 
     def get_unique_id(self):
         return 'gs108_' + self.host.replace('.', '_')
@@ -92,8 +102,8 @@ class GS108Switch(object):
             data = {'hash': client_hash}
         return self._request(url=url, method=method, data=data, allow_redirects=False)
 
-    def _parse_port_statistics(self, version, tree):
-        if version in ['V2.06.03']:
+    def _parse_port_statistics(self, tree):
+        if self._switch_bootloader in ['V2.06.03']:
             rx = tree.xpath('//input[@name="rxPkt"]')
             tx = tree.xpath('//input[@name="txpkt"]')
             crc = tree.xpath('//input[@name="crcPkt"]')
@@ -121,92 +131,88 @@ class GS108Switch(object):
         return rx, tx, crc
 
     def get_switch_infos(self):
-        page = self.fetch_switch_infos()
-        if not page:
-            return None
-        tree = html.fromstring(page.content)
+        switch_data = {}
 
-        # switch_info.htm:
-        switch_bootloader = 'unknown'
-        switch_serial_number = 'unknown'
-        client_hash = None
+        if not self._loaded_switch_infos:
+            page = self.fetch_switch_infos()
+            if not page:
+                return None
+            tree = html.fromstring(page.content)
 
-        switch_name = tree.xpath('//input[@id="switch_name"]')[0].value
+            # switch_info.htm:
+            switch_serial_number = 'unknown'
 
-        # Detect Firmware
-        switch_firmware = tree.xpath('//table[@id="tbl1"]/tr[6]/td[2]')[0].text
-        if switch_firmware is None:
-            # Fallback older versions
-            switch_firmware = tree.xpath('//table[@id="tbl1"]/tr[4]/td[2]')[0].text
+            switch_name = tree.xpath('//input[@id="switch_name"]')[0].value
 
-        switch_bootloader_x = tree.xpath('//td[@id="loader"]')
-        switch_serial_number_x = tree.xpath('//table[@id="tbl1"]/tr[3]/td[2]')
-        client_hash_x = tree.xpath('//input[@id="hash"]')
+            # Detect Firmware
+            switch_firmware = tree.xpath('//table[@id="tbl1"]/tr[6]/td[2]')[0].text
+            if switch_firmware is None:
+                # Fallback older versions
+                switch_firmware = tree.xpath('//table[@id="tbl1"]/tr[4]/td[2]')[0].text
 
-        if switch_bootloader_x:
-            switch_bootloader = switch_bootloader_x[0].text
-        if switch_serial_number_x:
-            switch_serial_number = switch_serial_number_x[0].text
-        if client_hash_x:
-            client_hash = client_hash_x[0].value
+            switch_bootloader_x = tree.xpath('//td[@id="loader"]')
+            switch_serial_number_x = tree.xpath('//table[@id="tbl1"]/tr[3]/td[2]')
+            client_hash_x = tree.xpath('//input[@id="hash"]')
 
-        #print("switch_name", switch_name)
-        #print("switch_bootloader", switch_bootloader)
-        #print("client_hash", client_hash)
-        #print("switch_firmware", switch_firmware)
-        #print("switch_serial_number", switch_serial_number)
+            if switch_bootloader_x:
+                self._switch_bootloader = switch_bootloader_x[0].text
+            if switch_serial_number_x:
+                switch_serial_number = switch_serial_number_x[0].text
+            if client_hash_x:
+                self._client_hash = client_hash_x[0].value
 
-        page = self.fetch_port_statistics(client_hash=client_hash)
-        if not page:
-            return None
+            #print("switch_name", switch_name)
+            #print("switch_bootloader", switch_bootloader)
+            #print("client_hash", client_hash)
+            #print("switch_firmware", switch_firmware)
+            #print("switch_serial_number", switch_serial_number)
 
-        _start_time = time.perf_counter()
+            switch_data.update(**{
+                'switch_ip': self.host,
+                'switch_name': switch_name,
+                'switch_bootloader': self._switch_bootloader,
+                'switch_firmware': switch_firmware,
+                'switch_serial_number': switch_serial_number,
+            })
 
-        # Parse content
-        tree = html.fromstring(page.content)
-
-        rx1, tx1, crc1 = self._parse_port_statistics(version=switch_bootloader, tree=tree)
+            # Avoid a second call on next get_switch_infos() call
+            self._loaded_switch_infos = True
 
         # Hold fire
         time.sleep(self.sleep_time)
 
-        # Get the port stats page again! We need to compare two points in time
-        page = self.fetch_port_statistics(client_hash=client_hash)
+        page = self.fetch_port_statistics(client_hash=self._client_hash)
         if not page:
             return None
 
-        _end_time = time.perf_counter()
-
-        tree = html.fromstring(page.content)
-        rx2, tx2, crc2 = self._parse_port_statistics(version=switch_bootloader, tree=tree)
-
-        sample_time = _end_time - _start_time
-        sample_factor = 1 / sample_time
-
-        # Port data
-        ports = min([len(tx1), len(tx2)])
-
+        # init values
         sum_port_traffic_rx = 0
         sum_port_traffic_tx = 0
         sum_port_traffic_crc_err = 0
         sum_port_speed_bps_rx = 0
         sum_port_speed_bps_tx = 0
 
-        switch_data = {
-            'switch_ip': self.host,
-            'response_time_s': sample_time,
-            'switch_name': switch_name,
-            'switch_bootloader': switch_bootloader,
-            'switch_firmware': switch_firmware,
-            'switch_serial_number': switch_serial_number,
+        _start_time = time.perf_counter()
+
+        # Parse content
+        tree = html.fromstring(page.content)
+        rx1, tx1, crc1 = self._parse_port_statistics(tree=tree)
+        current_data = {
+            'rx': rx1,
+            'tx': tx1,
+            'crc': crc1
         }
 
-        for port_number0 in range(ports):
+        sample_time = _start_time - self._previous_timestamp
+        sample_factor = 1 / sample_time
+        switch_data['response_time_s'] = sample_time
+
+        for port_number0 in range(self.ports):
             try:
                 port_number = port_number0 + 1
-                port_traffic_rx = rx2[port_number0] - rx1[port_number0]
-                port_traffic_tx = tx2[port_number0] - tx1[port_number0]
-                port_traffic_crc_err = crc2[port_number0] - crc1[port_number0]
+                port_traffic_rx = current_data['rx'][port_number0] - self._previous_data['rx'][port_number0]
+                port_traffic_tx = current_data['tx'][port_number0] - self._previous_data['tx'][port_number0]
+                port_traffic_crc_err = current_data['crc'][port_number0] - self._previous_data['crc'][port_number0]
                 port_speed_bps_rx = int(port_traffic_rx * sample_factor)
                 port_speed_bps_tx = int(port_traffic_tx * sample_factor)
             except IndexError:
@@ -231,12 +237,24 @@ class GS108Switch(object):
             sum_port_speed_bps_rx += port_speed_bps_rx
             sum_port_speed_bps_tx += port_speed_bps_tx
 
-            switch_data[f'port_{port_number}_traffic_rx_bytes'] = port_traffic_rx
-            switch_data[f'port_{port_number}_traffic_tx_bytes'] = port_traffic_tx
-            switch_data[f'port_{port_number}_speed_rx_bytes'] = port_speed_bps_rx
-            switch_data[f'port_{port_number}_speed_tx_bytes'] = port_speed_bps_tx
-            switch_data[f'port_{port_number}_speed_io_bytes'] = port_speed_bps_rx + port_speed_bps_tx
+            to_mbytes = 0.000001
+
+            def _reduce_digits(v):
+                return float("{:.2f}".format(round(v * to_mbytes, 2)))
+
+            switch_data[f'port_{port_number}_traffic_rx_mbytes'] = _reduce_digits(port_traffic_rx)
+            switch_data[f'port_{port_number}_traffic_tx_mbytes'] = _reduce_digits(port_traffic_tx)
+            switch_data[f'port_{port_number}_speed_rx_mbytes'] = _reduce_digits(port_speed_bps_rx)
+            switch_data[f'port_{port_number}_speed_tx_mbytes'] = _reduce_digits(port_speed_bps_tx)
+            switch_data[f'port_{port_number}_speed_io_mbytes'] = _reduce_digits(port_speed_bps_rx + port_speed_bps_tx)
             switch_data[f'port_{port_number}_crc_errors'] = port_traffic_crc_err
+
+        self._previous_timestamp = time.perf_counter()
+        self._previous_data = {
+            'rx': current_data['rx'],
+            'tx': current_data['tx'],
+            'crc': current_data['crc'],
+        }
 
         switch_data['sum_port_traffic_rx'] = sum_port_traffic_rx
         switch_data['sum_port_traffic_tx'] = sum_port_traffic_tx
@@ -244,6 +262,6 @@ class GS108Switch(object):
         switch_data['sum_port_speed_bps_rx'] = sum_port_speed_bps_rx
         switch_data['sum_port_speed_bps_tx'] = sum_port_speed_bps_tx
         switch_data['sum_port_speed_bps_io'] = sum_port_speed_bps_rx + sum_port_speed_bps_tx
-        return switch_data
 
+        return switch_data
 
