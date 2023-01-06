@@ -27,7 +27,7 @@ class GS108Switch(object):
             'crc': [0] * self.ports,
         }
         self._previous_timestamp = time.perf_counter()
-        self._loaded_switch_infos = False
+        self._loaded_switch_infos = {}
         self._client_hash = None
         self._switch_bootloader = 'unknown'
 
@@ -167,16 +167,16 @@ class GS108Switch(object):
             #print("switch_firmware", switch_firmware)
             #print("switch_serial_number", switch_serial_number)
 
-            switch_data.update(**{
+            # Avoid a second call on next get_switch_infos() call
+            self._loaded_switch_infos = {
                 'switch_ip': self.host,
                 'switch_name': switch_name,
                 'switch_bootloader': self._switch_bootloader,
                 'switch_firmware': switch_firmware,
                 'switch_serial_number': switch_serial_number,
-            })
+            }
 
-            # Avoid a second call on next get_switch_infos() call
-            self._loaded_switch_infos = True
+        switch_data.update(**self._loaded_switch_infos)
 
         # Hold fire
         time.sleep(self.sleep_time)
