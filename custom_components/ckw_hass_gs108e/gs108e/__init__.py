@@ -58,7 +58,7 @@ class GS108Switch(object):
         if error_msg:
             print("ERROR get_login_cookie:", error_msg[0].text)
             # 5 Minutes pause
-            time.sleep(5 * 60)
+            #time.sleep(5 * 60)
         return False
 
     def _request(self, method, url, data=None, timeout=15.00, allow_redirects=False):
@@ -109,9 +109,14 @@ class GS108Switch(object):
             crc = tree.xpath('//tr[@class="portID"]/td[4]')
 
             # convert to int
-            rx = [int(v.text, 10) for v in rx]
-            tx = [int(v.text, 10) for v in tx]
-            crc = [int(v.text, 10) for v in crc]
+            try:
+                rx = [int(v.text, 10) for v in rx]
+                tx = [int(v.text, 10) for v in tx]
+                crc = [int(v.text, 10) for v in crc]
+            except TypeError:
+                rx = [0] * 8
+                tx = [0] * 8
+                crc = [0] * 8
 
         return rx, tx, crc
 
@@ -205,7 +210,7 @@ class GS108Switch(object):
                 port_speed_bps_rx = int(port_traffic_rx * sample_factor)
                 port_speed_bps_tx = int(port_traffic_tx * sample_factor)
             except IndexError:
-                print("IndexError at port_number0", port_number0)
+                #print("IndexError at port_number0", port_number0)
                 continue
 
             # Lowpass-Filter
