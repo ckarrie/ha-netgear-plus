@@ -2,11 +2,11 @@
 HomeAssistant Netgear Switch Integration
 
 ## What it does
-Grabs statistical network data from your Netgear GS108Ev4
+Grabs statistical network data from your Netgear GS108Ev3
 
 ## How it works
 1. Connects to the Switch and asks for a cookie (`http://IP_OF_SWITCH/login.cgi`)
-2. Stores the cookie in a local temp directory (`/tmp/.gs108ecookie192.168.178.34`)
+2. ~~Stores the cookie in a local temp directory (`/tmp/.gs108ecookie192.168.178.34`)~~
 3. HTTP-Request send to the Switch twice (`http://IP_OF_SWITCH/portStatistics.cgi`)
 
 ## Which statistics
