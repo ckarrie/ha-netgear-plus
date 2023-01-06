@@ -57,6 +57,8 @@ class GS108Switch(object):
         error_msg = tree.xpath('//input[@id="err_msg"]')
         if error_msg:
             print("ERROR get_login_cookie:", error_msg[0].text)
+            # 5 Minutes pause
+            time.sleep(5 * 60)
         return False
 
     def _request(self, method, url, data=None, timeout=15.00, allow_redirects=False):
