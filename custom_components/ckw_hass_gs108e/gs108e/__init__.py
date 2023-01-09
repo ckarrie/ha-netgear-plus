@@ -241,16 +241,33 @@ class GS108Switch(object):
             if port_speed_bps_tx < 0:
                 port_speed_bps_tx = 0
 
+            # Highpass-Filter (max 1e9 B/s = 1GB/s per port)
+            hp_max_traffic = 1e9 * sample_time
+            if port_traffic_rx > hp_max_traffic:
+                port_traffic_rx = hp_max_traffic
+            if port_traffic_tx > hp_max_traffic:
+                port_traffic_tx = hp_max_traffic
+            if port_traffic_crc_err > hp_max_traffic:
+                port_traffic_crc_err = hp_max_traffic
+
+            # Highpass-Filter (max 1e9 B/s = 1GB/s per port)
+            # speed is already normalized to 1s
+            hp_max_speed = 1e9
+            if port_speed_bps_rx > hp_max_speed:
+                port_speed_bps_rx = hp_max_speed
+            if port_speed_bps_tx > hp_max_speed:
+                port_speed_bps_tx = hp_max_speed
+
             sum_port_traffic_rx += port_traffic_rx
             sum_port_traffic_tx += port_traffic_tx
             sum_port_traffic_crc_err += port_traffic_crc_err
             sum_port_speed_bps_rx += port_speed_bps_rx
             sum_port_speed_bps_tx += port_speed_bps_tx
 
-            to_mbytes = 0.000001
+            bytes_to_mbytes = 1e-6
 
             def _reduce_digits(v):
-                return float("{:.2f}".format(round(v * to_mbytes, 2)))
+                return float("{:.2f}".format(round(v * bytes_to_mbytes, 2)))
 
             switch_data[f'port_{port_number}_traffic_rx_mbytes'] = _reduce_digits(port_traffic_rx)
             switch_data[f'port_{port_number}_traffic_tx_mbytes'] = _reduce_digits(port_traffic_tx)
