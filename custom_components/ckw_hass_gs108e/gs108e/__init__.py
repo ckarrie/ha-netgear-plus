@@ -103,31 +103,41 @@ class GS108Switch(object):
         return self._request(url=url, method=method, data=data, allow_redirects=False)
 
     def _parse_port_statistics(self, tree):
-        if self._switch_bootloader in ['V2.06.03']:
-            rx = tree.xpath('//input[@name="rxPkt"]')
-            tx = tree.xpath('//input[@name="txpkt"]')
-            crc = tree.xpath('//input[@name="crcPkt"]')
 
-            # convert to int
-            rx = [int(v.value, 16) for v in rx]
-            tx = [int(v.value, 16) for v in tx]
-            crc = [int(v.value, 16) for v in crc]
+        # convert to int
+        def convert_to_int(lst, output_elems, base=10, attr_name='text'):
+            new_lst = []
+            for obj in lst:
+                try:
+                    value = int(getattr(obj, attr_name), base)
+                except (TypeError, ValueError):
+                    value = 0
+                new_lst.append(value)
+
+            if len(new_lst) < output_elems:
+                diff = output_elems - len(new_lst)
+                new_lst.extend([0] * diff)
+            return new_lst
+
+        if self._switch_bootloader in ['V2.06.03']:
+            rx_elems = tree.xpath('//input[@name="rxPkt"]')
+            tx_elems = tree.xpath('//input[@name="txpkt"]')
+            crc_elems = tree.xpath('//input[@name="crcPkt"]')
+
+            # convert to int (base 16)
+            rx = convert_to_int(rx_elems, output_elems=self.ports, base=16, attr_name='value')
+            tx = convert_to_int(tx_elems, output_elems=self.ports, base=16, attr_name='value')
+            crc = convert_to_int(crc_elems, output_elems=self.ports, base=16, attr_name='value')
 
         else:
-            rx = tree.xpath('//tr[@class="portID"]/td[2]')
-            tx = tree.xpath('//tr[@class="portID"]/td[3]')
-            crc = tree.xpath('//tr[@class="portID"]/td[4]')
+            rx_elems = tree.xpath('//tr[@class="portID"]/td[2]')
+            tx_elems = tree.xpath('//tr[@class="portID"]/td[3]')
+            crc_elems = tree.xpath('//tr[@class="portID"]/td[4]')
 
-            # convert to int
-            try:
-                rx = [int(v.text, 10) for v in rx]
-                tx = [int(v.text, 10) for v in tx]
-                crc = [int(v.text, 10) for v in crc]
-            except TypeError:
-                rx = [0] * 8
-                tx = [0] * 8
-                crc = [0] * 8
-
+            # convert to int (base 10)
+            rx = convert_to_int(rx_elems, output_elems=self.ports, base=10, attr_name='text')
+            tx = convert_to_int(tx_elems, output_elems=self.ports, base=10, attr_name='text')
+            crc = convert_to_int(crc_elems, output_elems=self.ports, base=10, attr_name='text')
         return rx, tx, crc
 
     def get_switch_infos(self):
