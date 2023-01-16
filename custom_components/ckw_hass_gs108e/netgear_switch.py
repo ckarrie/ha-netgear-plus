@@ -35,6 +35,8 @@ def get_api(host: str, password: str) -> GS108Switch:
 
 
 class HAGS108Switch:
+    SWITCH_PORTS = 8
+
     def __init__(self, hass: HomeAssistant, entry: ConfigEntry) -> None:
         assert entry.unique_id
         self.hass = hass
@@ -43,6 +45,9 @@ class HAGS108Switch:
         self.unique_id = entry.unique_id
         self.device_name = entry.title
         self.model = "GS108E"
+        self.config = {
+            'ports': 8
+        }
         self._host: str = entry.data[CONF_HOST]
         self._password = entry.data[CONF_PASSWORD]
 
