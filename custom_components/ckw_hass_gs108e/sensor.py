@@ -130,7 +130,7 @@ PORT_TEMPLATE = OrderedDict({
         'icon': "mdi:download"
     },
     'port_{port}_speed_tx_mbytes': {
-        'name': 'Port {port} Receiving',
+        'name': 'Port {port} Transferring',
         'native_unit_of_measurement': UnitOfDataRate.MEGABYTES_PER_SECOND,
         # 'unit_of_measurement': UnitOfInformation.GIGABYTES,
         'device_class': SensorDeviceClass.DATA_RATE,
