@@ -1,0 +1,29 @@
+{
+    "config": {
+        "abort": {
+            "already_configured": "Enheten är redan konfigurerad"
+        },
+        "error": {
+            "config": "Anslutnings- eller inloggningsfel: kontrollera din konfiguration"
+        },
+        "step": {
+            "user": {
+                "data": {
+                    "host": "Switch IP-adress",
+                    "password": "Lösenord"
+                },
+                "description": "Standardvärdet för värden är: {host}"
+            }
+        }
+    },
+    "options": {
+        "step": {
+            "init": {
+                "data": {
+                    "consider_home": "Timeout (sekunder)"
+                },
+                "description": "Ange valfria inställningar"
+            }
+        }
+    }
+}
