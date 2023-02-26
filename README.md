@@ -21,13 +21,13 @@ Grabs statistical network data from your Netgear GS108Ev3
   - `sum_port_speed_bps_io` - Received and transferred traffic speed 
   - `ports` - List of statistics for each Switch port
 - statistics for each Port (8 Ports for GS108Ev4) as attributes
-  - `port_nr`
-  - `traffic_rx_bytes`
-  - `traffic_tx_bytes`
-  - `speed_rx_bytes`
-  - `speed_tx_bytes`
-  - `speed_io_bytes`
-  - `crc_errors`
+  - `port_nr` - RJ45 Port Number
+  - `traffic_rx_mbytes` - Megabytes received during `response_time_s`
+  - `traffic_tx_mbytes` - Megabytes transferred during `response_time_s`
+  - `speed_rx_mbytes` - Megabytes received per 1 second
+  - `speed_tx_mbytes` - Megabytes transferred per 1 second
+  - `speed_io_mbytes` - Megabytes throughput per 1 second
+  - `crc_errors` - CRC counter
 
 
 ## How to integrate in your HomeAssistant
