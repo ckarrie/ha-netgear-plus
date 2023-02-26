@@ -48,7 +48,7 @@ After adding the integration go to [Add Integration](https://my.home-assistant.i
 ```python3
 import gs108e
 import time
-sw = gs108e.GS108Switch("192.168.178.8", "Gd6hq6t7")
+sw = gs108e.GS108Switch("192.168.178.8", "password")
 sw.get_login_cookie()
 
 while True:
