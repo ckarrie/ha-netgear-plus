@@ -176,6 +176,7 @@ async def async_setup_entry(
                 key=port_sensor_key.format(port=port_nr),
                 name=port_sensor_data['name'].format(port=port_nr),
                 native_unit_of_measurement=port_sensor_data['native_unit_of_measurement'],
+                unit_of_measurement=port_sensor_data.get('unit_of_measurement', None),
                 device_class=port_sensor_data['device_class'],
                 icon=port_sensor_data['icon']
             )
