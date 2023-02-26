@@ -38,7 +38,7 @@ Grabs statistical network data from your Netgear GS108Ev3
 2. Click on the right corner on the vertical dots and select "Custom Repositories"
 3. Add "https://github.com/ckarrie/ckw-ha-gs108e" as Integration
 
-After adding the integration go to [Add Integration](https://my.home-assistant.io/redirect/integrations/) and select *CKW GS108e Integration*.
+After adding the integration go to [Add Integration](https://my.home-assistant.io/redirect/integrations/) and select **Netgear GS108e Integration**.
 
 
 ![image](https://user-images.githubusercontent.com/4140156/118571964-9ac0fa80-b77f-11eb-951e-a5e393157bd0.png)

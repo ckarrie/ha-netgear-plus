@@ -37,16 +37,6 @@ from .netgear_switch import HAGS108Switch, HAGS108SwitchCoordinatorEntity
 
 _LOGGER = logging.getLogger(__name__)
 
-SENSOR_TYPES = {
-    "link_rate": SensorEntityDescription(
-        key="link_rate",
-        name="link rate",
-        native_unit_of_measurement="Mbps",
-        entity_category=EntityCategory.DIAGNOSTIC,
-        icon="mdi:speedometer",
-    ),
-}
-
 
 @dataclass
 class NetgearSensorEntityDescription(SensorEntityDescription):
@@ -203,7 +193,6 @@ class NetgearRouterSensorEntity(HAGS108SwitchCoordinatorEntity, RestoreSensor):
         self.entity_description = entity_description
         self._name = f"{switch.device_name} {entity_description.name}"
         self._unique_id = f"{switch.unique_id}-{entity_description.key}-{entity_description.index}"
-
         self._value: StateType | date | datetime | Decimal = None
         self.async_update_device()
 
