@@ -133,6 +133,20 @@ PORT_TEMPLATE = OrderedDict({
         'device_class': SensorDeviceClass.DATA_RATE,
         'icon': "mdi:swap-vertical"
     },
+    'port_{port}_sum_rx_mbytes': {
+        'name': 'Port {port} Total Received',
+        'native_unit_of_measurement': UnitOfInformation.MEGABYTES,
+        'unit_of_measurement': UnitOfInformation.GIGABYTES,
+        'device_class': SensorDeviceClass.DATA_SIZE,
+        'icon': "mdi:download"
+    },
+    'port_{port}_sum_tx_mbytes': {
+        'name': 'Port {port} Total Transferred',
+        'native_unit_of_measurement': UnitOfInformation.MEGABYTES,
+        'unit_of_measurement': UnitOfInformation.GIGABYTES,
+        'device_class': SensorDeviceClass.DATA_SIZE,
+        'icon': "mdi:upload"
+    },
 })
 
 

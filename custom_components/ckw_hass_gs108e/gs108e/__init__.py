@@ -94,11 +94,11 @@ class GS108Switch(object):
         method = 'get'
         return self._request(url=url, method=method)
 
-    def fetch_port_statistics(self, client_hash):
+    def fetch_port_statistics(self, client_hash=None):
         url = PORT_STATISTICS_URL_TMPL.format(ip=self.host)
         method = 'post'
         data = None
-        if client_hash:
+        if client_hash is not None:
             data = {'hash': client_hash}
         return self._request(url=url, method=method, data=data, allow_redirects=False)
 
@@ -225,6 +225,8 @@ class GS108Switch(object):
                 port_traffic_crc_err = current_data['crc'][port_number0] - self._previous_data['crc'][port_number0]
                 port_speed_bps_rx = int(port_traffic_rx * sample_factor)
                 port_speed_bps_tx = int(port_traffic_tx * sample_factor)
+                port_sum_rx = current_data['rx'][port_number0]
+                port_sum_tx = current_data['tx'][port_number0]
             except IndexError:
                 #print("IndexError at port_number0", port_number0)
                 continue
@@ -240,6 +242,16 @@ class GS108Switch(object):
                 port_speed_bps_rx = 0
             if port_speed_bps_tx < 0:
                 port_speed_bps_tx = 0
+
+            # Access old data if value is 0
+            if port_sum_rx <= 0:
+                port_sum_rx = self._previous_data['rx'][port_number0]
+                current_data['rx'][port_number0] = port_sum_rx
+                # print(f"Fallback to previous data: port_nr={port_number} port_sum_rx={port_sum_rx}")
+            if port_sum_tx <= 0:
+                port_sum_tx = self._previous_data['tx'][port_number0]
+                current_data['tx'][port_number0] = port_sum_tx
+                # print(f"Fallback to previous data: port_nr={port_number} port_sum_rx={port_sum_tx}")
 
             # Highpass-Filter (max 1e9 B/s = 1GB/s per port)
             hp_max_traffic = 1e9 * sample_time
@@ -275,6 +287,8 @@ class GS108Switch(object):
             switch_data[f'port_{port_number}_speed_tx_mbytes'] = _reduce_digits(port_speed_bps_tx)
             switch_data[f'port_{port_number}_speed_io_mbytes'] = _reduce_digits(port_speed_bps_rx + port_speed_bps_tx)
             switch_data[f'port_{port_number}_crc_errors'] = port_traffic_crc_err
+            switch_data[f'port_{port_number}_sum_rx_mbytes'] = _reduce_digits(port_sum_rx)
+            switch_data[f'port_{port_number}_sum_tx_mbytes'] = _reduce_digits(port_sum_tx)
 
         self._previous_timestamp = time.perf_counter()
         self._previous_data = {

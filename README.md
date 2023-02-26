@@ -42,3 +42,22 @@ After adding the integration go to [Add Integration](https://my.home-assistant.i
 
 
 ![image](https://user-images.githubusercontent.com/4140156/118571964-9ac0fa80-b77f-11eb-951e-a5e393157bd0.png)
+
+## GS108e library
+
+```python3
+import gs108e
+import time
+sw = gs108e.GS108Switch("192.168.178.8", "Gd6hq6t7")
+sw.get_login_cookie()
+
+while True:
+    sw.get_switch_infos()["port_1_sum_rx_mbytes"]
+    time.sleep(1)
+
+
+
+
+```
+
+
