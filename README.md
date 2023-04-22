@@ -57,7 +57,33 @@ while True:
     time.sleep(1)
 
 
+```
 
+
+## Local Dev Notes
+
+```shell
+cd ~/workspace/src/ckw-ha-gs108e/custom_components/ckw_hass_gs108e
+python3
+```
+
+```python
+ip = '192.168.178.68'
+p = 'fyce4gKZemkqjDY'
+import gs108e
+sw = gs108e.GS108Switch(ip, p)
+#gs108e.LOGIN_HTM_URL_TMPL = gs108e.LOGIN_CGI_URL_TMPL
+# change get_login_password to fallback
+sw.get_login_password()
+```
+
+
+## New API
+
+```python
+from gs108e import NetgearSwitch
+ns = NetgearSwitch("192.168.178.68", "fyce4gKZemkqjDY")
+ns.autodetect_model()
 
 ```
 

@@ -3,12 +3,49 @@ from lxml import html
 import time
 
 from .netgear_crypt import merge, make_md5
+from . import models
 
 LOGIN_HTM_URL_TMPL = 'http://{ip}/login.htm'
 LOGIN_CGI_URL_TMPL = 'http://{ip}/login.cgi'
 SWITCH_INFO_HTM_URL_TMPL = 'http://{ip}/switch_info.htm'
+SWITCH_INFO_CGI_URL_TMPL = 'http://{ip}/switch_info.cgi'
 PORT_STATISTICS_URL_TMPL = 'http://{ip}/portStatistics.cgi'
 ALLOWED_COOKIE_TYPES = ['GS108SID', 'SID']
+
+MODELS = [
+    models.GS105E,
+    models.GS105Ev2,
+    models.GS108E,
+    models.GS305EP,
+    models.GS308EP
+]
+
+
+class NetgearSwitch:
+    def __init__(self, host, password):
+        self.host = host
+        self._password = password
+        self.model = None
+
+    def autodetect_model(self):
+        passed_checks_by_model = {}
+        for mdl_cls in MODELS:
+            mdl = mdl_cls(self.host, self._password)
+            cls_name = mdl.__class__.__name__
+            passed_checks_by_model[cls_name] = {}
+            for func_name, af_results in mdl.get_autodetect_funcs():
+                #if hasattr(self, func_name):
+                af_result = getattr(mdl, func_name)()
+                check_result = af_result in af_results
+                passed_checks_by_model[cls_name][func_name] = check_result
+        print(passed_checks_by_model)
+
+
+
+
+def scan_lan_for_netgear_switches(start_ip='192.168.178.1'):
+    found_switches = {}
+
 
 
 class GS108Switch(object):
@@ -30,13 +67,14 @@ class GS108Switch(object):
         self._loaded_switch_infos = {}
         self._client_hash = None
         self._switch_bootloader = 'unknown'
+        self._model = None
 
     def get_unique_id(self):
         return 'gs108_' + self.host.replace('.', '_')
 
-    def get_login_password(self):
+    def get_login_password(self, url_tmpl=LOGIN_HTM_URL_TMPL):
         response = requests.get(
-            LOGIN_HTM_URL_TMPL.format(ip=self.host),
+            url_tmpl.format(ip=self.host),
             allow_redirects=False
         )
         tree = html.fromstring(response.content)
@@ -47,6 +85,12 @@ class GS108Switch(object):
             merged = merge(user_password, input_rand)
             md5 = make_md5(merged)
             return md5
+
+        # GS305
+        title_tag_elems = tree.xpath('//title')
+        if title_tag_elems and title_tag_elems[0].text.strip() == 'Redirect to Login':
+            return self.get_login_password(url_tmpl=LOGIN_CGI_URL_TMPL)
+
         return user_password
 
     def get_login_cookie(self):
@@ -89,10 +133,13 @@ class GS108Switch(object):
         except requests.exceptions.Timeout:
             return None
 
-    def fetch_switch_infos(self):
-        url = SWITCH_INFO_HTM_URL_TMPL.format(ip=self.host)
+    def fetch_switch_infos(self, url_tmpl=SWITCH_INFO_HTM_URL_TMPL):
+        url = url_tmpl.format(ip=self.host)
         method = 'get'
-        return self._request(url=url, method=method)
+        resp = self._request(url=url, method=method)
+        if isinstance(resp, requests.Response) and resp.status_code == 404:
+            return self.fetch_switch_infos(url_tmpl=SWITCH_INFO_CGI_URL_TMPL)
+        return resp
 
     def fetch_port_statistics(self, client_hash=None):
         url = PORT_STATISTICS_URL_TMPL.format(ip=self.host)
