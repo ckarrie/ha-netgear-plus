@@ -78,7 +78,7 @@ sw.get_login_password()
 ```
 
 
-## New API
+## New API [WIP]
 
 ```python
 from gs108e import NetgearSwitch
