@@ -119,7 +119,7 @@ class GS108Switch(object):
                 new_lst.extend([0] * diff)
             return new_lst
 
-        if self._switch_bootloader in ['V2.06.03']:
+        if self._switch_bootloader in ['V2.06.01'] or self._switch_bootloader in ['V2.06.03']:
             rx_elems = tree.xpath('//input[@name="rxPkt"]')
             tx_elems = tree.xpath('//input[@name="txpkt"]')
             crc_elems = tree.xpath('//input[@name="crcPkt"]')
