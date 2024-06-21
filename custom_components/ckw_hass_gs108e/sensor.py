@@ -8,6 +8,7 @@ from datetime import date, datetime
 from decimal import Decimal
 import logging
 
+from homeassistant.components.binary_sensor import BinarySensorDeviceClass
 from homeassistant.components.sensor import (
     RestoreSensor,
     SensorDeviceClass,
@@ -146,6 +147,17 @@ PORT_TEMPLATE = OrderedDict({
         'unit_of_measurement': UnitOfInformation.GIGABYTES,
         'device_class': SensorDeviceClass.DATA_SIZE,
         'icon': "mdi:upload"
+    },
+    'port_{port}_status': {
+        'name': 'Port {port} Status',
+        'device_class': BinarySensorDeviceClass.CONNECTIVITY,
+        #'icon': "mdi:upload"
+    },
+    'port_{port}_connection_speed': {
+        'name': 'Port {port} Connection Speed',
+        'native_unit_of_measurement': UnitOfDataRate.MEGABYTES_PER_SECOND,
+        'device_class': SensorDeviceClass.DATA_RATE,
+        #'icon': "mdi:upload"
     },
 })
 
