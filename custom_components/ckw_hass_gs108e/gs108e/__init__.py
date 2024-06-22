@@ -19,6 +19,9 @@ API_V2_CHECKS = {
     "firmware": ["V2.06.24GR", "V2.06.24EN"],
 }
 
+PORT_STATUS_CONNECTED = ["Aktiv", "Up"]
+PORT_MODUS_SPEED = ["Auto"]
+
 MODELS = [models.GS105E, models.GS105Ev2, models.GS108E, models.GS305EP, models.GS308EP]
 
 
@@ -433,12 +436,12 @@ class GS108Switch(object):
                 switch_data[f"port_{port_number}_status"] = (
                     "on"
                     if self.port_status[port_number].get("status")
-                    in ["Aktiv", "active"]
+                    in PORT_STATUS_CONNECTED
                     else "off"
                 )
-                switch_data[f"port_{port_number}_modus_speed"] = self.port_status[
-                    port_number
-                ].get("modus_speed") in ["Auto", "auto"]
+                switch_data[f"port_{port_number}_modus_speed"] = (
+                    self.port_status[port_number].get("modus_speed") in PORT_MODUS_SPEED
+                )
                 port_connection_speed = self.port_status[port_number].get(
                     "connection_speed"
                 )
