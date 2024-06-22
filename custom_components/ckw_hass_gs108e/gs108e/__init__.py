@@ -1,9 +1,10 @@
-import requests
-from lxml import html
 import time
 
-from .netgear_crypt import merge, make_md5
+from lxml import html
+import requests
+
 from . import models
+from .netgear_crypt import make_md5, merge
 
 LOGIN_HTM_URL_TMPL = "http://{ip}/login.htm"
 LOGIN_CGI_URL_TMPL = "http://{ip}/login.cgi"
@@ -13,7 +14,10 @@ PORT_STATISTICS_URL_TMPL = "http://{ip}/portStatistics.cgi"
 PORT_STATUS_URL_TMPL = "http://{ip}/status.htm"
 ALLOWED_COOKIE_TYPES = ["GS108SID", "SID"]
 
-API_V2_CHECKS = {"bootloader": ["V2.06.03"], "firmware": ["V2.06.24GR", "V2.06.24EN"]}
+API_V2_CHECKS = {
+    "bootloader": ["V2.06.01", "V2.06.03"],
+    "firmware": ["V2.06.24GR", "V2.06.24EN"],
+}
 
 MODELS = [models.GS105E, models.GS105Ev2, models.GS108E, models.GS305EP, models.GS308EP]
 
