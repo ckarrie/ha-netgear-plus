@@ -5,26 +5,17 @@ import time
 from .netgear_crypt import merge, make_md5
 from . import models
 
-LOGIN_HTM_URL_TMPL = 'http://{ip}/login.htm'
-LOGIN_CGI_URL_TMPL = 'http://{ip}/login.cgi'
-SWITCH_INFO_HTM_URL_TMPL = 'http://{ip}/switch_info.htm'
-SWITCH_INFO_CGI_URL_TMPL = 'http://{ip}/switch_info.cgi'
-PORT_STATISTICS_URL_TMPL = 'http://{ip}/portStatistics.cgi'
-PORT_STATUS_URL_TMPL = 'http://{ip}/status.htm'
-ALLOWED_COOKIE_TYPES = ['GS108SID', 'SID']
+LOGIN_HTM_URL_TMPL = "http://{ip}/login.htm"
+LOGIN_CGI_URL_TMPL = "http://{ip}/login.cgi"
+SWITCH_INFO_HTM_URL_TMPL = "http://{ip}/switch_info.htm"
+SWITCH_INFO_CGI_URL_TMPL = "http://{ip}/switch_info.cgi"
+PORT_STATISTICS_URL_TMPL = "http://{ip}/portStatistics.cgi"
+PORT_STATUS_URL_TMPL = "http://{ip}/status.htm"
+ALLOWED_COOKIE_TYPES = ["GS108SID", "SID"]
 
-API_V2_CHECKS = {
-    'bootloader': ['V2.06.03'],
-    'firmware': ['V2.06.24GR', 'V2.06.24EN']
-}
+API_V2_CHECKS = {"bootloader": ["V2.06.03"], "firmware": ["V2.06.24GR", "V2.06.24EN"]}
 
-MODELS = [
-    models.GS105E,
-    models.GS105Ev2,
-    models.GS108E,
-    models.GS305EP,
-    models.GS308EP
-]
+MODELS = [models.GS105E, models.GS105Ev2, models.GS108E, models.GS305EP, models.GS308EP]
 
 
 class NetgearSwitch:
@@ -40,22 +31,19 @@ class NetgearSwitch:
             cls_name = mdl.__class__.__name__
             passed_checks_by_model[cls_name] = {}
             for func_name, af_results in mdl.get_autodetect_funcs():
-                #if hasattr(self, func_name):
+                # if hasattr(self, func_name):
                 af_result = getattr(mdl, func_name)()
                 check_result = af_result in af_results
                 passed_checks_by_model[cls_name][func_name] = check_result
         print(passed_checks_by_model)
 
 
-
-
-def scan_lan_for_netgear_switches(start_ip='192.168.178.1'):
+def scan_lan_for_netgear_switches(start_ip="192.168.178.1"):
     found_switches = {}
 
 
-
 class GS108Switch(object):
-    def __init__(self, host, password):
+    def __init__(self, host, password):  # noqa: D107
         self.host = host
         self._password = password
         self._login_password = None
@@ -65,24 +53,23 @@ class GS108Switch(object):
         self.timeout = 15.000
         self.ports = 8
         self._previous_data = {
-            'tx': [0] * self.ports,
-            'rx': [0] * self.ports,
-            'crc': [0] * self.ports,
+            "tx": [0] * self.ports,
+            "rx": [0] * self.ports,
+            "crc": [0] * self.ports,
         }
         self._previous_timestamp = time.perf_counter()
         self._loaded_switch_infos = {}
         self._client_hash = None
-        self._switch_bootloader = 'unknown'
+        self._switch_bootloader = "unknown"
         self._model = None
         self.port_status = {}
 
     def get_unique_id(self):
-        return 'gs108_' + self.host.replace('.', '_')
+        return "gs108_" + self.host.replace(".", "_")
 
     def get_login_password(self, url_tmpl=LOGIN_HTM_URL_TMPL):
         response = requests.get(
-            url_tmpl.format(ip=self.host),
-            allow_redirects=False
+            url_tmpl.format(ip=self.host), allow_redirects=False, timeout=self.timeout
         )
         tree = html.fromstring(response.content)
         input_rand_elems = tree.xpath('//input[@id="rand"]')
@@ -90,12 +77,11 @@ class GS108Switch(object):
         if input_rand_elems:
             input_rand = input_rand_elems[0].value
             merged = merge(user_password, input_rand)
-            md5 = make_md5(merged)
-            return md5
+            return make_md5(merged)
 
         # GS305
-        title_tag_elems = tree.xpath('//title')
-        if title_tag_elems and title_tag_elems[0].text.strip() == 'Redirect to Login':
+        title_tag_elems = tree.xpath("//title")
+        if title_tag_elems and title_tag_elems[0].text.strip() == "Redirect to Login":
             return self.get_login_password(url_tmpl=LOGIN_CGI_URL_TMPL)
 
         return user_password
@@ -105,8 +91,9 @@ class GS108Switch(object):
             self._login_password = self.get_login_password()
         response = requests.post(
             LOGIN_CGI_URL_TMPL.format(ip=self.host),
-            data=dict(password=self._login_password),
-            allow_redirects=True
+            data={"password": self._login_password},
+            allow_redirects=True,
+            timeout=self.timeout,
         )
         for ct in ALLOWED_COOKIE_TYPES:
             cookie = response.cookies.get(ct, None)
@@ -117,24 +104,27 @@ class GS108Switch(object):
         tree = html.fromstring(response.content)
         error_msg = tree.xpath('//input[@id="err_msg"]')
         if error_msg:
-            print("ERROR get_login_cookie:", error_msg[0].value)
+            error_msg = error_msg[0].value
+            print(
+                f'[ckw_hass_gs108e.get_login_cookie] [IP: {self.host}] Response from switch: "{error_msg}", sleeping for 5 minutes now'
+            )
             # 5 Minutes pause
-            #time.sleep(5 * 60)
+            # time.sleep(5 * 60)
         return False
 
     def _request(self, method, url, data=None, timeout=15.00, allow_redirects=False):
         if not self.cookie_name or not self.cookie_content:
             return None
         jar = requests.cookies.RequestsCookieJar()
-        jar.set(self.cookie_name, self.cookie_content, domain=self.host, path='/')
-        request_func = requests.post if method == 'post' else requests.get
+        jar.set(self.cookie_name, self.cookie_content, domain=self.host, path="/")
+        request_func = requests.post if method == "post" else requests.get
         try:
             page = request_func(
                 url,
                 data=data,
                 cookies=jar,
                 timeout=timeout,
-                allow_redirects=allow_redirects
+                allow_redirects=allow_redirects,
             )
             return page
         except requests.exceptions.Timeout:
@@ -142,7 +132,7 @@ class GS108Switch(object):
 
     def fetch_switch_infos(self, url_tmpl=SWITCH_INFO_HTM_URL_TMPL):
         url = url_tmpl.format(ip=self.host)
-        method = 'get'
+        method = "get"
         resp = self._request(url=url, method=method)
         if isinstance(resp, requests.Response) and resp.status_code == 404:
             return self.fetch_switch_infos(url_tmpl=SWITCH_INFO_CGI_URL_TMPL)
@@ -150,21 +140,21 @@ class GS108Switch(object):
 
     def fetch_port_statistics(self, client_hash=None):
         url = PORT_STATISTICS_URL_TMPL.format(ip=self.host)
-        method = 'post'
+        method = "post"
         data = None
         if client_hash is not None:
-            data = {'hash': client_hash}
+            data = {"hash": client_hash}
         return self._request(url=url, method=method, data=data, allow_redirects=False)
 
     def fetch_port_status(self, client_hash=None):
         url = PORT_STATUS_URL_TMPL.format(ip=self.host)
-        method = 'get'
+        method = "get"
         resp = self._request(url=url, method=method)
         return resp
 
     def _parse_port_statistics(self, tree):
         # convert to int
-        def convert_to_int(lst, output_elems, base=10, attr_name='text'):
+        def convert_to_int(lst, output_elems, base=10, attr_name="text"):
             new_lst = []
             for obj in lst:
                 try:
@@ -178,8 +168,11 @@ class GS108Switch(object):
                 new_lst.extend([0] * diff)
             return new_lst
 
-        match_bootloader = self._switch_bootloader in API_V2_CHECKS['bootloader']
-        match_firmware = self._loaded_switch_infos.get('switch_firmware', "") in API_V2_CHECKS['firmware']
+        match_bootloader = self._switch_bootloader in API_V2_CHECKS["bootloader"]
+        match_firmware = (
+            self._loaded_switch_infos.get("switch_firmware", "")
+            in API_V2_CHECKS["firmware"]
+        )
 
         if match_bootloader or match_firmware:
             rx_elems = tree.xpath('//input[@name="rxPkt"]')
@@ -187,9 +180,15 @@ class GS108Switch(object):
             crc_elems = tree.xpath('//input[@name="crcPkt"]')
 
             # convert to int (base 16)
-            rx = convert_to_int(rx_elems, output_elems=self.ports, base=16, attr_name='value')
-            tx = convert_to_int(tx_elems, output_elems=self.ports, base=16, attr_name='value')
-            crc = convert_to_int(crc_elems, output_elems=self.ports, base=16, attr_name='value')
+            rx = convert_to_int(
+                rx_elems, output_elems=self.ports, base=16, attr_name="value"
+            )
+            tx = convert_to_int(
+                tx_elems, output_elems=self.ports, base=16, attr_name="value"
+            )
+            crc = convert_to_int(
+                crc_elems, output_elems=self.ports, base=16, attr_name="value"
+            )
 
         else:
             rx_elems = tree.xpath('//tr[@class="portID"]/td[2]')
@@ -197,31 +196,57 @@ class GS108Switch(object):
             crc_elems = tree.xpath('//tr[@class="portID"]/td[4]')
 
             # convert to int (base 10)
-            rx = convert_to_int(rx_elems, output_elems=self.ports, base=10, attr_name='text')
-            tx = convert_to_int(tx_elems, output_elems=self.ports, base=10, attr_name='text')
-            crc = convert_to_int(crc_elems, output_elems=self.ports, base=10, attr_name='text')
+            rx = convert_to_int(
+                rx_elems, output_elems=self.ports, base=10, attr_name="text"
+            )
+            tx = convert_to_int(
+                tx_elems, output_elems=self.ports, base=10, attr_name="text"
+            )
+            crc = convert_to_int(
+                crc_elems, output_elems=self.ports, base=10, attr_name="text"
+            )
         return rx, tx, crc
 
     def _parse_port_status(self, tree):
         status_by_port = {}
 
-        match_bootloader = self._switch_bootloader in API_V2_CHECKS['bootloader']
-        match_firmware = self._loaded_switch_infos.get('switch_firmware', "") in API_V2_CHECKS['firmware']
+        match_bootloader = self._switch_bootloader in API_V2_CHECKS["bootloader"]
+        match_firmware = (
+            self._loaded_switch_infos.get("switch_firmware", "")
+            in API_V2_CHECKS["firmware"]
+        )
 
         if match_bootloader or match_firmware:
-            #port_elems = tree.xpath('//tr[@class="portID"]/td[2]')
+            # port_elems = tree.xpath('//tr[@class="portID"]/td[2]')
             portstatus_elems = tree.xpath('//tr[@class="portID"]/td[3]')
             portspeed_elems = tree.xpath('//tr[@class="portID"]/td[4]')
             portconnectionspeed_elems = tree.xpath('//tr[@class="portID"]/td[5]')
 
             for port_nr in range(self.ports):
+                try:
+                    status_text = portstatus_elems[port_nr].text.replace("\n", "")
+                    modus_speed_text = portspeed_elems[port_nr].text.replace("\n", "")
+                    connection_speed_text = portconnectionspeed_elems[
+                        port_nr
+                    ].text.replace("\n", "")
+                except (IndexError, AttributeError):
+                    status_text = self.port_status.get(port_nr + 1, {}).get(
+                        "status", None
+                    )
+                    modus_speed_text = self.port_status.get(port_nr + 1, {}).get(
+                        "modus_speed", None
+                    )
+                    connection_speed_text = self.port_status.get(port_nr + 1, {}).get(
+                        "connection_speed", None
+                    )
                 status_by_port[port_nr + 1] = {
-                    'status': portstatus_elems[port_nr].text.replace('\n', ''),
-                    'modus_speed': portspeed_elems[port_nr].text.replace('\n', ''),
-                    'connection_speed': portconnectionspeed_elems[port_nr].text.replace('\n', ''),
+                    "status": status_text,
+                    "modus_speed": modus_speed_text,
+                    "connection_speed": connection_speed_text,
                 }
 
         self.port_status = status_by_port
+        # print("Port Status", self.port_status)
         return status_by_port
 
     def get_switch_infos(self):
@@ -234,7 +259,7 @@ class GS108Switch(object):
             tree = html.fromstring(page.content)
 
             # switch_info.htm:
-            switch_serial_number = 'unknown'
+            switch_serial_number = "unknown"
 
             switch_name = tree.xpath('//input[@id="switch_name"]')[0].value
 
@@ -255,19 +280,19 @@ class GS108Switch(object):
             if client_hash_x:
                 self._client_hash = client_hash_x[0].value
 
-            #print("switch_name", switch_name)
-            #print("switch_bootloader", switch_bootloader)
-            #print("client_hash", client_hash)
-            #print("switch_firmware", switch_firmware)
-            #print("switch_serial_number", switch_serial_number)
+            # print("switch_name", switch_name)
+            # print("switch_bootloader", switch_bootloader)
+            # print("client_hash", client_hash)
+            # print("switch_firmware", switch_firmware)
+            # print("switch_serial_number", switch_serial_number)
 
             # Avoid a second call on next get_switch_infos() call
             self._loaded_switch_infos = {
-                'switch_ip': self.host,
-                'switch_name': switch_name,
-                'switch_bootloader': self._switch_bootloader,
-                'switch_firmware': switch_firmware,
-                'switch_serial_number': switch_serial_number,
+                "switch_ip": self.host,
+                "switch_name": switch_name,
+                "switch_bootloader": self._switch_bootloader,
+                "switch_firmware": switch_firmware,
+                "switch_serial_number": switch_serial_number,
             }
 
         switch_data.update(**self._loaded_switch_infos)
@@ -291,11 +316,7 @@ class GS108Switch(object):
         # Parse content
         tree = html.fromstring(page.content)
         rx1, tx1, crc1 = self._parse_port_statistics(tree=tree)
-        current_data = {
-            'rx': rx1,
-            'tx': tx1,
-            'crc': crc1
-        }
+        current_data = {"rx": rx1, "tx": tx1, "crc": crc1}
 
         # Fetch Port Status
         time.sleep(self.sleep_time)
@@ -305,20 +326,29 @@ class GS108Switch(object):
 
         sample_time = _start_time - self._previous_timestamp
         sample_factor = 1 / sample_time
-        switch_data['response_time_s'] = round(sample_time, 1)
+        switch_data["response_time_s"] = round(sample_time, 1)
 
         for port_number0 in range(self.ports):
             try:
                 port_number = port_number0 + 1
-                port_traffic_rx = current_data['rx'][port_number0] - self._previous_data['rx'][port_number0]
-                port_traffic_tx = current_data['tx'][port_number0] - self._previous_data['tx'][port_number0]
-                port_traffic_crc_err = current_data['crc'][port_number0] - self._previous_data['crc'][port_number0]
+                port_traffic_rx = (
+                    current_data["rx"][port_number0]
+                    - self._previous_data["rx"][port_number0]
+                )
+                port_traffic_tx = (
+                    current_data["tx"][port_number0]
+                    - self._previous_data["tx"][port_number0]
+                )
+                port_traffic_crc_err = (
+                    current_data["crc"][port_number0]
+                    - self._previous_data["crc"][port_number0]
+                )
                 port_speed_bps_rx = int(port_traffic_rx * sample_factor)
                 port_speed_bps_tx = int(port_traffic_tx * sample_factor)
-                port_sum_rx = current_data['rx'][port_number0]
-                port_sum_tx = current_data['tx'][port_number0]
+                port_sum_rx = current_data["rx"][port_number0]
+                port_sum_tx = current_data["tx"][port_number0]
             except IndexError:
-                #print("IndexError at port_number0", port_number0)
+                # print("IndexError at port_number0", port_number0)
                 continue
 
             # Lowpass-Filter
@@ -335,12 +365,12 @@ class GS108Switch(object):
 
             # Access old data if value is 0
             if port_sum_rx <= 0:
-                port_sum_rx = self._previous_data['rx'][port_number0]
-                current_data['rx'][port_number0] = port_sum_rx
+                port_sum_rx = self._previous_data["rx"][port_number0]
+                current_data["rx"][port_number0] = port_sum_rx
                 # print(f"Fallback to previous data: port_nr={port_number} port_sum_rx={port_sum_rx}")
             if port_sum_tx <= 0:
-                port_sum_tx = self._previous_data['tx'][port_number0]
-                current_data['tx'][port_number0] = port_sum_tx
+                port_sum_tx = self._previous_data["tx"][port_number0]
+                current_data["tx"][port_number0] = port_sum_tx
                 # print(f"Fallback to previous data: port_nr={port_number} port_sum_rx={port_sum_tx}")
 
             # Highpass-Filter (max 1e9 B/s = 1GB/s per port)
@@ -371,43 +401,69 @@ class GS108Switch(object):
             def _reduce_digits(v):
                 return float("{:.2f}".format(round(v * bytes_to_mbytes, 2)))
 
-            switch_data[f'port_{port_number}_traffic_rx_mbytes'] = _reduce_digits(port_traffic_rx)
-            switch_data[f'port_{port_number}_traffic_tx_mbytes'] = _reduce_digits(port_traffic_tx)
-            switch_data[f'port_{port_number}_speed_rx_mbytes'] = _reduce_digits(port_speed_bps_rx)
-            switch_data[f'port_{port_number}_speed_tx_mbytes'] = _reduce_digits(port_speed_bps_tx)
-            switch_data[f'port_{port_number}_speed_io_mbytes'] = _reduce_digits(port_speed_bps_rx + port_speed_bps_tx)
-            switch_data[f'port_{port_number}_crc_errors'] = port_traffic_crc_err
-            switch_data[f'port_{port_number}_sum_rx_mbytes'] = _reduce_digits(port_sum_rx)
-            switch_data[f'port_{port_number}_sum_tx_mbytes'] = _reduce_digits(port_sum_tx)
+            switch_data[f"port_{port_number}_traffic_rx_mbytes"] = _reduce_digits(
+                port_traffic_rx
+            )
+            switch_data[f"port_{port_number}_traffic_tx_mbytes"] = _reduce_digits(
+                port_traffic_tx
+            )
+            switch_data[f"port_{port_number}_speed_rx_mbytes"] = _reduce_digits(
+                port_speed_bps_rx
+            )
+            switch_data[f"port_{port_number}_speed_tx_mbytes"] = _reduce_digits(
+                port_speed_bps_tx
+            )
+            switch_data[f"port_{port_number}_speed_io_mbytes"] = _reduce_digits(
+                port_speed_bps_rx + port_speed_bps_tx
+            )
+            switch_data[f"port_{port_number}_crc_errors"] = port_traffic_crc_err
+            switch_data[f"port_{port_number}_sum_rx_mbytes"] = _reduce_digits(
+                port_sum_rx
+            )
+            switch_data[f"port_{port_number}_sum_tx_mbytes"] = _reduce_digits(
+                port_sum_tx
+            )
 
             # Port Status
             if len(port_status) == self.ports:
-                switch_data[f'port_{port_number}_active'] = self.port_status[port_number].get('status') in ["Aktiv", "active"]
-                switch_data[f'port_{port_number}_modus_speed'] = self.port_status[port_number].get('modus_speed') in ["Auto", "auto"]
-                port_connection_speed = self.port_status[port_number].get('connection_speed')
-                if port_connection_speed == '1000M':
+                switch_data[f"port_{port_number}_status"] = (
+                    "on"
+                    if self.port_status[port_number].get("status")
+                    in ["Aktiv", "active"]
+                    else "off"
+                )
+                switch_data[f"port_{port_number}_modus_speed"] = self.port_status[
+                    port_number
+                ].get("modus_speed") in ["Auto", "auto"]
+                port_connection_speed = self.port_status[port_number].get(
+                    "connection_speed"
+                )
+                if port_connection_speed == "1000M":
                     port_connection_speed = 1000
-                elif port_connection_speed == '100M':
+                elif port_connection_speed == "100M":
                     port_connection_speed = 100
                 elif port_connection_speed in ["Nicht verbunden"]:
                     port_connection_speed = 0
                 else:
                     port_connection_speed = 0
-                switch_data[f'port_{port_number}_connection_speed'] = port_connection_speed
+                switch_data[f"port_{port_number}_connection_speed"] = (
+                    port_connection_speed
+                )
 
         self._previous_timestamp = time.perf_counter()
         self._previous_data = {
-            'rx': current_data['rx'],
-            'tx': current_data['tx'],
-            'crc': current_data['crc'],
+            "rx": current_data["rx"],
+            "tx": current_data["tx"],
+            "crc": current_data["crc"],
         }
 
-        switch_data['sum_port_traffic_rx'] = sum_port_traffic_rx
-        switch_data['sum_port_traffic_tx'] = sum_port_traffic_tx
-        switch_data['sum_port_traffic_crc_err'] = sum_port_traffic_crc_err
-        switch_data['sum_port_speed_bps_rx'] = sum_port_speed_bps_rx
-        switch_data['sum_port_speed_bps_tx'] = sum_port_speed_bps_tx
-        switch_data['sum_port_speed_bps_io'] = sum_port_speed_bps_rx + sum_port_speed_bps_tx
+        switch_data["sum_port_traffic_rx"] = sum_port_traffic_rx
+        switch_data["sum_port_traffic_tx"] = sum_port_traffic_tx
+        switch_data["sum_port_traffic_crc_err"] = sum_port_traffic_crc_err
+        switch_data["sum_port_speed_bps_rx"] = sum_port_speed_bps_rx
+        switch_data["sum_port_speed_bps_tx"] = sum_port_speed_bps_tx
+        switch_data["sum_port_speed_bps_io"] = (
+            sum_port_speed_bps_rx + sum_port_speed_bps_tx
+        )
 
         return switch_data
-

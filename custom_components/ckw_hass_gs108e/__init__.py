@@ -1,12 +1,14 @@
+"""HomeAssistant integration for Netgear Switches."""
+
 from __future__ import annotations
 
-import logging
 from datetime import timedelta
+import logging
 from typing import Any
 
 from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant
 from homeassistant.const import CONF_HOST
+from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import ConfigEntryNotReady
 from homeassistant.helpers import device_registry as dr
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
@@ -16,7 +18,7 @@ from .const import (
     KEY_COORDINATOR_SWITCH_INFOS,
     KEY_SWITCH,
     PLATFORMS,
-    SCAN_INTERVAL
+    SCAN_INTERVAL,
 )
 from .errors import CannotLoginException
 from .netgear_switch import HAGS108Switch

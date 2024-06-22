@@ -1,3 +1,5 @@
+"""HomeAssistant Setup for Netgear API."""
+
 from __future__ import annotations
 
 from abc import abstractmethod
@@ -5,21 +7,16 @@ import asyncio
 from typing import Any
 
 from homeassistant.config_entries import ConfigEntry
+from homeassistant.const import CONF_HOST, CONF_PASSWORD
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.entity import DeviceInfo, Entity
-
 from homeassistant.helpers.update_coordinator import (
     CoordinatorEntity,
     DataUpdateCoordinator,
 )
 
-from homeassistant.const import (
-    CONF_HOST,
-    CONF_PASSWORD,
-)
-
-from .errors import CannotLoginException
 from .const import DOMAIN
+from .errors import CannotLoginException
 from .gs108e import GS108Switch
 
 
@@ -44,9 +41,7 @@ class HAGS108Switch:
         self.unique_id = entry.unique_id
         self.device_name = entry.title
         self.model = "GS108E"
-        self.config = {
-            'ports': 8
-        }
+        self.config = {"ports": 8}
         self._host: str = entry.data[CONF_HOST]
         self._password = entry.data[CONF_PASSWORD]
 
@@ -54,10 +49,7 @@ class HAGS108Switch:
         self.api_lock = asyncio.Lock()
 
     def _setup(self) -> bool:
-        self.api = get_api(
-            host=self._host,
-            password=self._password
-        )
+        self.api = get_api(host=self._host, password=self._password)
         return True
 
     async def async_setup(self) -> bool:
@@ -137,4 +129,3 @@ class HAGS108SwitchEntity(Entity):
         return DeviceInfo(
             identifiers={(DOMAIN, self._switch.unique_id)},
         )
-
