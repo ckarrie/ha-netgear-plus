@@ -15,7 +15,7 @@ PORT_STATUS_URL_TMPL = "http://{ip}/status.htm"
 ALLOWED_COOKIE_TYPES = ["GS108SID", "SID"]
 
 API_V2_CHECKS = {
-    "bootloader": ["V2.06.01", "V2.06.02", "V2.06.03"],
+    "bootloader": ["V1.00.03", "V2.06.01", "V2.06.02", "V2.06.03"],
     "firmware": ["V2.06.24GR", "V2.06.24EN"],
 }
 
