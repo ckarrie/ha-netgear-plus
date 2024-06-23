@@ -543,24 +543,27 @@ class NetgearSwitchConnector:
                 port_speed_bps_io = 0
 
             # Access old data if value is 0
+            port_status_is_connected = (
+                switch_data.get(f"port_{port_number}_status", "off") == "on"
+            )
             if port_sum_rx <= 0:
                 port_sum_rx = self._previous_data["rx"][port_number0]
                 current_data["rx"][port_number0] = port_sum_rx
-                if switch_data[f"port_{port_number}_status"] == "on":
+                if port_status_is_connected:
                     _LOGGER.info(
                         f"Fallback to previous data: port_nr={port_number} port_sum_rx={port_sum_rx}"
                     )
             if port_sum_tx <= 0:
                 port_sum_tx = self._previous_data["tx"][port_number0]
                 current_data["tx"][port_number0] = port_sum_tx
-                if switch_data[f"port_{port_number}_status"] == "on":
+                if port_status_is_connected:
                     _LOGGER.info(
                         f"Fallback to previous data: port_nr={port_number} port_sum_rx={port_sum_tx}"
                     )
             if port_speed_bps_io <= 0:
                 port_speed_bps_io = self._previous_data["io"][port_number0]
                 current_data["io"][port_number0] = port_speed_bps_io
-                if switch_data[f"port_{port_number}_status"] == "on":
+                if port_status_is_connected:
                     _LOGGER.info(
                         f"Fallback to previous data: port_nr={port_number} port_speed_bps_io={port_speed_bps_io}"
                     )
