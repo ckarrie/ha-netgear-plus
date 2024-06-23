@@ -145,6 +145,7 @@ class NetgearSwitchConnector:
                 "tx": [0] * self.ports,
                 "rx": [0] * self.ports,
                 "crc": [0] * self.ports,
+                "io": [0] * self.ports,
             }
 
     def check_login_url(self):
@@ -462,7 +463,8 @@ class NetgearSwitchConnector:
         # Parse content
         tree = html.fromstring(page.content)
         rx1, tx1, crc1 = self._parse_port_statistics(tree=tree)
-        current_data = {"rx": rx1, "tx": tx1, "crc": crc1}
+        io_zeros = [0] * self.ports
+        current_data = {"rx": rx1, "tx": tx1, "crc": crc1, "io": io_zeros}
 
         # Fetch Port Status
         time.sleep(self.sleep_time)
@@ -491,79 +493,12 @@ class NetgearSwitchConnector:
                 )
                 port_speed_bps_rx = int(port_traffic_rx * sample_factor)
                 port_speed_bps_tx = int(port_traffic_tx * sample_factor)
+                port_speed_bps_io = port_speed_bps_rx + port_speed_bps_tx
                 port_sum_rx = current_data["rx"][port_number0]
                 port_sum_tx = current_data["tx"][port_number0]
             except IndexError:
                 # print("IndexError at port_number0", port_number0)
                 continue
-
-            # Lowpass-Filter
-            if port_traffic_rx < 0:
-                port_traffic_rx = 0
-            if port_traffic_tx < 0:
-                port_traffic_tx = 0
-            if port_traffic_crc_err < 0:
-                port_traffic_crc_err = 0
-            if port_speed_bps_rx < 0:
-                port_speed_bps_rx = 0
-            if port_speed_bps_tx < 0:
-                port_speed_bps_tx = 0
-
-            # Access old data if value is 0
-            if port_sum_rx <= 0:
-                port_sum_rx = self._previous_data["rx"][port_number0]
-                current_data["rx"][port_number0] = port_sum_rx
-                # print(f"Fallback to previous data: port_nr={port_number} port_sum_rx={port_sum_rx}")
-            if port_sum_tx <= 0:
-                port_sum_tx = self._previous_data["tx"][port_number0]
-                current_data["tx"][port_number0] = port_sum_tx
-                # print(f"Fallback to previous data: port_nr={port_number} port_sum_rx={port_sum_tx}")
-
-            # Highpass-Filter (max 1e9 B/s = 1GB/s per port)
-            hp_max_traffic = 1e9 * sample_time
-            if port_traffic_rx > hp_max_traffic:
-                port_traffic_rx = hp_max_traffic
-            if port_traffic_tx > hp_max_traffic:
-                port_traffic_tx = hp_max_traffic
-            if port_traffic_crc_err > hp_max_traffic:
-                port_traffic_crc_err = hp_max_traffic
-
-            # Highpass-Filter (max 1e9 B/s = 1GB/s per port)
-            # speed is already normalized to 1s
-            hp_max_speed = 1e9
-            if port_speed_bps_rx > hp_max_speed:
-                port_speed_bps_rx = hp_max_speed
-            if port_speed_bps_tx > hp_max_speed:
-                port_speed_bps_tx = hp_max_speed
-
-            sum_port_traffic_rx += port_traffic_rx
-            sum_port_traffic_tx += port_traffic_tx
-            sum_port_traffic_crc_err += port_traffic_crc_err
-            sum_port_speed_bps_rx += port_speed_bps_rx
-            sum_port_speed_bps_tx += port_speed_bps_tx
-
-            switch_data[f"port_{port_number}_traffic_rx_mbytes"] = _reduce_digits(
-                port_traffic_rx
-            )
-            switch_data[f"port_{port_number}_traffic_tx_mbytes"] = _reduce_digits(
-                port_traffic_tx
-            )
-            switch_data[f"port_{port_number}_speed_rx_mbytes"] = _reduce_digits(
-                port_speed_bps_rx
-            )
-            switch_data[f"port_{port_number}_speed_tx_mbytes"] = _reduce_digits(
-                port_speed_bps_tx
-            )
-            switch_data[f"port_{port_number}_speed_io_mbytes"] = _reduce_digits(
-                port_speed_bps_rx + port_speed_bps_tx
-            )
-            switch_data[f"port_{port_number}_crc_errors"] = port_traffic_crc_err
-            switch_data[f"port_{port_number}_sum_rx_mbytes"] = _reduce_digits(
-                port_sum_rx
-            )
-            switch_data[f"port_{port_number}_sum_tx_mbytes"] = _reduce_digits(
-                port_sum_tx
-            )
 
             # Port Status
             if len(port_status) == self.ports:
@@ -593,12 +528,91 @@ class NetgearSwitchConnector:
                     port_connection_speed
                 )
 
-        self._previous_timestamp = time.perf_counter()
-        self._previous_data = {
-            "rx": current_data["rx"],
-            "tx": current_data["tx"],
-            "crc": current_data["crc"],
-        }
+            # Lowpass-Filter
+            if port_traffic_rx < 0:
+                port_traffic_rx = 0
+            if port_traffic_tx < 0:
+                port_traffic_tx = 0
+            if port_traffic_crc_err < 0:
+                port_traffic_crc_err = 0
+            if port_speed_bps_rx < 0:
+                port_speed_bps_rx = 0
+            if port_speed_bps_tx < 0:
+                port_speed_bps_tx = 0
+            if port_speed_bps_io < 0:
+                port_speed_bps_io = 0
+
+            # Access old data if value is 0
+            if port_sum_rx <= 0:
+                port_sum_rx = self._previous_data["rx"][port_number0]
+                current_data["rx"][port_number0] = port_sum_rx
+                if switch_data[f"port_{port_number}_status"] == "on":
+                    _LOGGER.info(
+                        f"Fallback to previous data: port_nr={port_number} port_sum_rx={port_sum_rx}"
+                    )
+            if port_sum_tx <= 0:
+                port_sum_tx = self._previous_data["tx"][port_number0]
+                current_data["tx"][port_number0] = port_sum_tx
+                if switch_data[f"port_{port_number}_status"] == "on":
+                    _LOGGER.info(
+                        f"Fallback to previous data: port_nr={port_number} port_sum_rx={port_sum_tx}"
+                    )
+            if port_speed_bps_io <= 0:
+                port_speed_bps_io = self._previous_data["io"][port_number0]
+                current_data["io"][port_number0] = port_speed_bps_io
+                if switch_data[f"port_{port_number}_status"] == "on":
+                    _LOGGER.info(
+                        f"Fallback to previous data: port_nr={port_number} port_speed_bps_io={port_speed_bps_io}"
+                    )
+
+            # Highpass-Filter (max 1e9 B/s = 1GB/s per port)
+            hp_max_traffic = 1e9 * sample_time
+            if port_traffic_rx > hp_max_traffic:
+                port_traffic_rx = hp_max_traffic
+            if port_traffic_tx > hp_max_traffic:
+                port_traffic_tx = hp_max_traffic
+            if port_traffic_crc_err > hp_max_traffic:
+                port_traffic_crc_err = hp_max_traffic
+
+            # Highpass-Filter (max 1e9 B/s = 1GB/s per port)
+            # speed is already normalized to 1s
+            hp_max_speed = 1e9
+            if port_speed_bps_rx > hp_max_speed:
+                port_speed_bps_rx = hp_max_speed
+            if port_speed_bps_tx > hp_max_speed:
+                port_speed_bps_tx = hp_max_speed
+
+            sum_port_traffic_rx += port_traffic_rx
+            sum_port_traffic_tx += port_traffic_tx
+            sum_port_traffic_crc_err += port_traffic_crc_err
+            sum_port_speed_bps_rx += port_speed_bps_rx
+            sum_port_speed_bps_tx += port_speed_bps_tx
+
+            # set for later (previous data)
+            current_data["io"][port_number0] = port_speed_bps_io
+
+            switch_data[f"port_{port_number}_traffic_rx_mbytes"] = _reduce_digits(
+                port_traffic_rx
+            )
+            switch_data[f"port_{port_number}_traffic_tx_mbytes"] = _reduce_digits(
+                port_traffic_tx
+            )
+            switch_data[f"port_{port_number}_speed_rx_mbytes"] = _reduce_digits(
+                port_speed_bps_rx
+            )
+            switch_data[f"port_{port_number}_speed_tx_mbytes"] = _reduce_digits(
+                port_speed_bps_tx
+            )
+            switch_data[f"port_{port_number}_speed_io_mbytes"] = _reduce_digits(
+                port_speed_bps_io
+            )
+            switch_data[f"port_{port_number}_crc_errors"] = port_traffic_crc_err
+            switch_data[f"port_{port_number}_sum_rx_mbytes"] = _reduce_digits(
+                port_sum_rx
+            )
+            switch_data[f"port_{port_number}_sum_tx_mbytes"] = _reduce_digits(
+                port_sum_tx
+            )
 
         switch_data["sum_port_traffic_rx"] = _reduce_digits(sum_port_traffic_rx)
         switch_data["sum_port_traffic_tx"] = _reduce_digits(sum_port_traffic_tx)
@@ -608,6 +622,15 @@ class NetgearSwitchConnector:
         switch_data["sum_port_speed_bps_io"] = _reduce_digits(
             v=sum_port_speed_bps_rx + sum_port_speed_bps_tx
         )
+
+        # set previous data
+        self._previous_timestamp = time.perf_counter()
+        self._previous_data = {
+            "rx": current_data["rx"],
+            "tx": current_data["tx"],
+            "crc": current_data["crc"],
+            "io": current_data["io"],
+        }
 
         return switch_data
 
