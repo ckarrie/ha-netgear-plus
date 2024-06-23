@@ -1,100 +1,84 @@
-import requests
-from lxml import html
-from . import netgear_crypt
+"""Definitions of auto-detectable Switch models."""
 
 
-class NetgearSwitchModel:
-    LOGIN_URL = 'http://{ip}/login.htm'
-    PORTS = 0
+class AutodetectedSwitchModel:
+    MODEL_NAME = None
+    PORTS = None
+    POE_PORTS = 0
     POE_SUPPORT = False
-    AUTODETECT_FUNCS = []  # List of (function names, args, [return values to check])
+    CHECKS_AND_RESULTS = []
 
-    def __init__(self, host, password=None):
-        self.host = host
-        self.password = password
-
-    def get_autodetect_funcs(self):
-        return self.AUTODETECT_FUNCS
-
-
-class LoginRequired(NetgearSwitchModel):
-    def __init__(self, host, password):
-        super(LoginRequired, self).__init__(host, password)
-        self._login_url_response = None
-        self._form_password = None
+    def __init__(self) -> None:
+        pass
 
     def get_autodetect_funcs(self):
-        funcs = super(LoginRequired, self).get_autodetect_funcs()
-        funcs.append(('check_login_url', [200]))
-        funcs.append(('check_login_form_rand', [200]))
-        return funcs
-
-    def check_login_url(self):
-        url = self.LOGIN_URL.format(ip=self.host)
-        resp = requests.get(url, allow_redirects=False)
-        self._login_url_response = resp
-        return resp.status_code
-
-    def check_login_form_rand(self):
-        tree = html.fromstring(self._login_url_response.content)
-        input_rand_elems = tree.xpath('//input[@id="rand"]')
-        print(input_rand_elems)
-        user_password = self.password
-        if input_rand_elems:
-            input_rand = input_rand_elems[0].value
-            merged = netgear_crypt.merge(user_password, input_rand)
-            md5 = netgear_crypt.make_md5(merged)
-            self._form_password = md5
-            return True
-        return False
+        return self.CHECKS_AND_RESULTS
 
 
-class GS105E(LoginRequired):
+class GS105E(AutodetectedSwitchModel):
+    MODEL_NAME = "GS105E"
     PORTS = 5
-    LOGIN_URL = 'http://{ip}/login.htm'
-
-    def get_autodetect_funcs(self):
-        funcs = super(GS105E, self).get_autodetect_funcs()
-        funcs.append(('check_login_form_rand', [True]))
-        return funcs
+    CHECKS_AND_RESULTS = [
+        ("check_login_form_rand", [True]),
+        ("check_login_title_tag", ["GS105E"]),
+    ]
 
 
-class GS105Ev2(LoginRequired):
+class GS105Ev2(AutodetectedSwitchModel):
+    MODEL_NAME = "GS105Ev2"
     PORTS = 5
+    CHECKS_AND_RESULTS = [
+        ("check_login_form_rand", [True]),
+        ("check_login_title_tag", ["GS105Ev2"]),
+    ]
 
-    def get_autodetect_funcs(self):
-        funcs = super(GS105Ev2, self).get_autodetect_funcs()
-        funcs.append(('check_login_form_rand', [True]))
-        return funcs
 
-
-class GS108E(LoginRequired):
+class GS108E(AutodetectedSwitchModel):
+    MODEL_NAME = "GS108E"
     PORTS = 8
+    CHECKS_AND_RESULTS = [
+        ("check_login_form_rand", [True]),
+        ("check_login_title_tag", ["GS108E"]),
+        (
+            "check_login_switchinfo_tag",
+            ["GS308E - 8-Port Gigabit Ethernet Smart Managed Plus Switch"],
+        ),
+    ]
 
-    def get_autodetect_funcs(self):
-        funcs = super(GS108E, self).get_autodetect_funcs()
-        funcs.append(('check_login_form_rand', [True]))
-        return funcs
+
+class GS108Ev3(AutodetectedSwitchModel):
+    MODEL_NAME = "GS108Ev3"
+    PORTS = 8
+    CHECKS_AND_RESULTS = [
+        ("check_login_form_rand", [True]),
+        ("check_login_title_tag", ["GS108Ev3"]),
+        (
+            "check_login_switchinfo_tag",
+            [
+                "GS108Ev3 - 8-Port Gigabit ProSAFE Plus Switch",
+                "GS108Ev3 - 8-Port Gigabit Ethernet Smart Managed Plus Switch",
+            ],
+        ),
+    ]
 
 
-class GS305EP(LoginRequired):
+class GS305EP(AutodetectedSwitchModel):
+    MODEL_NAME = "GS305EP"
     PORTS = 5
     POE_SUPPORT = True
-    LOGIN_URL = 'http://{ip}/login.cgi'
+    CHECKS_AND_RESULTS = [
+        ("check_login_form_rand", [True]),
+        ("check_login_title_tag", ["GS305EP"]),
+    ]
+    DASHBOARD_CGI_URL_TMPL = "http://{ip}/dashboard.cgi"
 
-    def get_autodetect_funcs(self):
-        funcs = super(GS305EP, self).get_autodetect_funcs()
-        funcs.append(('check_login_form_rand', [True]))
-        return funcs
 
-
-class GS308EP(LoginRequired):
+class GS308EP(AutodetectedSwitchModel):
+    MODEL_NAME = "GS308EP"
     PORTS = 8
     POE_SUPPORT = True
-    LOGIN_URL = 'http://{ip}/login.cgi'
-
-    def get_autodetect_funcs(self):
-        funcs = super(GS308EP, self).get_autodetect_funcs()
-        funcs.append(('check_login_form_rand', [True]))
-        return funcs
-
+    CHECKS_AND_RESULTS = [
+        ("check_login_form_rand", [True]),
+        ("check_login_title_tag", ["GS308EP"]),
+    ]
+    DASHBOARD_CGI_URL_TMPL = "http://{ip}/dashboard.cgi"

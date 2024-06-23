@@ -33,9 +33,9 @@ from .netgear_entities import (
     NetgearBinarySensorEntityDescription,
     NetgearRouterBinarySensorEntity,
 )
-from .netgear_switch import HAGS108Switch, HAGS108SwitchCoordinatorEntity
+from .netgear_switch import HAGS108SwitchCoordinatorEntity, HomeAssistantNetgearSwitch
 
-device_class_connection = BinarySensorDeviceClass.CONNECTIVITY
+_LOGGER = logging.getLogger(__name__)
 
 # Todo add connectivity sensors as binary
 
@@ -55,7 +55,9 @@ async def async_setup_entry(
     hass: HomeAssistant, entry: ConfigEntry, async_add_entities: AddEntitiesCallback
 ) -> None:
     """Set up device tracker for Netgear component."""
-    gs_switch = hass.data[DOMAIN][entry.entry_id][KEY_SWITCH]
+    gs_switch: HomeAssistantNetgearSwitch = hass.data[DOMAIN][entry.entry_id][
+        KEY_SWITCH
+    ]
     coordinator_switch_infos = hass.data[DOMAIN][entry.entry_id][
         KEY_COORDINATOR_SWITCH_INFOS
     ]
@@ -65,7 +67,11 @@ async def async_setup_entry(
     # Router entities
     switch_entities = []
 
-    ports_cnt = gs_switch.SWITCH_PORTS
+    ports_cnt = gs_switch.api.ports
+    _LOGGER.info(
+        "[binary_sensor.async_setup_entry] setting up Platform.BINARY_SENSOR for %d Switch Ports",
+        ports_cnt,
+    )
     for i in range(ports_cnt):
         port_nr = i + 1
         for port_sensor_key, port_sensor_data in PORT_TEMPLATE.items():

@@ -6,6 +6,7 @@
         "error": {
             "config": "Connection or login error: please check your configuration"
         },
+        "timeout": "Timeout to server, please try again in few minutes",
         "step": {
             "user": {
                 "data": {

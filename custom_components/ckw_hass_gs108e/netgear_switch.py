@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from abc import abstractmethod
 import asyncio
+import logging
 from typing import Any
 
 from homeassistant.config_entries import ConfigEntry
@@ -15,14 +16,23 @@ from homeassistant.helpers.update_coordinator import (
     DataUpdateCoordinator,
 )
 
-from .const import DOMAIN
+from .const import DOMAIN, SUPPORTED_MODELS
 from .errors import CannotLoginException
-from .gs108e import GS108Switch
+from .gs108e import NetgearSwitchConnector
+
+_LOGGER = logging.getLogger(__name__)
 
 
-def get_api(host: str, password: str) -> GS108Switch:
+def api_autodetect_model(host: str, password: str):
+    api: NetgearSwitchConnector = NetgearSwitchConnector(host, password)
+    return api.autodetect_model()
+    # if autodetected_model in SUPPORTED_MODELS
+
+
+def get_api(host: str, password: str) -> NetgearSwitchConnector:
     """Get the Netgear API and login to it."""
-    api: GS108Switch = GS108Switch(host, password)
+    api: NetgearSwitchConnector = NetgearSwitchConnector(host, password)
+    api.autodetect_model()
 
     if not api.get_login_cookie():
         raise CannotLoginException
@@ -30,9 +40,7 @@ def get_api(host: str, password: str) -> GS108Switch:
     return api
 
 
-class HAGS108Switch:
-    SWITCH_PORTS = 8
-
+class HomeAssistantNetgearSwitch:
     def __init__(self, hass: HomeAssistant, entry: ConfigEntry) -> None:
         assert entry.unique_id
         self.hass = hass
@@ -40,16 +48,28 @@ class HAGS108Switch:
         self.entry_id = entry.entry_id
         self.unique_id = entry.unique_id
         self.device_name = entry.title
-        self.model = "GS108E"
-        self.config = {"ports": 8}
         self._host: str = entry.data[CONF_HOST]
         self._password = entry.data[CONF_PASSWORD]
 
-        self.api: GS108Switch = None
+        # set on setup
+        self.api: NetgearSwitchConnector = None
+        self.model = None
+
+        # async lock
         self.api_lock = asyncio.Lock()
 
     def _setup(self) -> bool:
         self.api = get_api(host=self._host, password=self._password)
+        if not self.api.switch_model:
+            _LOGGER.info(
+                "[HomeAssistantNetgearSwitch._setup] No NetgearSwitchConnector switch_model set, autodetecting model via NetgearSwitchConnector.autodetect_model()"
+            )
+            self.api.autodetect_model()
+            _LOGGER.info(
+                "[HomeAssistantNetgearSwitch._setup] Autodetected model: %s",
+                str(self.api.switch_model),
+            )
+        self.model = self.api.switch_model.MODEL_NAME
         return True
 
     async def async_setup(self) -> bool:
@@ -67,7 +87,7 @@ class HAGS108SwitchCoordinatorEntity(CoordinatorEntity):
     """Base class for a Netgear router entity."""
 
     def __init__(
-        self, coordinator: DataUpdateCoordinator, switch: HAGS108Switch
+        self, coordinator: DataUpdateCoordinator, switch: HomeAssistantNetgearSwitch
     ) -> None:
         """Initialize a Netgear device."""
         super().__init__(coordinator)
@@ -107,7 +127,7 @@ class HAGS108SwitchCoordinatorEntity(CoordinatorEntity):
 class HAGS108SwitchEntity(Entity):
     """Base class for a Netgear router entity without coordinator."""
 
-    def __init__(self, switch: HAGS108Switch) -> None:
+    def __init__(self, switch: HomeAssistantNetgearSwitch) -> None:
         """Initialize a Netgear device."""
         self._switch = switch
         self._name = switch.device_name

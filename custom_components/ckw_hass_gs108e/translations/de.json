@@ -6,6 +6,7 @@
         "error": {
             "config": "Verbindungs- oder Anmeldefehler: Bitte \u00fcberpr\u00fcfe deine Konfiguration"
         },
+        "timeout": "Zeitüberschreitung bei der Verbindung zum Switch",
         "step": {
             "user": {
                 "data": {

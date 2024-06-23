@@ -28,6 +28,7 @@ from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
 
 from .const import DOMAIN, KEY_COORDINATOR_SWITCH_INFOS, KEY_SWITCH
 from .netgear_entities import NetgearRouterSensorEntity, NetgearSensorEntityDescription
+from .netgear_switch import HomeAssistantNetgearSwitch
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -154,7 +155,9 @@ async def async_setup_entry(
     hass: HomeAssistant, entry: ConfigEntry, async_add_entities: AddEntitiesCallback
 ) -> None:
     """Set up device tracker for Netgear component."""
-    gs_switch = hass.data[DOMAIN][entry.entry_id][KEY_SWITCH]
+    gs_switch: HomeAssistantNetgearSwitch = hass.data[DOMAIN][entry.entry_id][
+        KEY_SWITCH
+    ]
     coordinator_switch_infos = hass.data[DOMAIN][entry.entry_id][
         KEY_COORDINATOR_SWITCH_INFOS
     ]
@@ -170,7 +173,11 @@ async def async_setup_entry(
         )
         switch_entities.append(descr_entity)
 
-    ports_cnt = gs_switch.SWITCH_PORTS
+    ports_cnt = gs_switch.api.ports
+    _LOGGER.info(
+        "[sensor.async_setup_entry] setting up Platform.SENSOR for %d Switch Ports",
+        ports_cnt,
+    )
     for i in range(ports_cnt):
         port_nr = i + 1
         for port_sensor_key, port_sensor_data in PORT_TEMPLATE.items():

@@ -1,5 +1,9 @@
-from dataclasses import dataclass
 from collections.abc import Callable
+from dataclasses import dataclass
+from datetime import date, datetime
+from decimal import Decimal
+import logging
+
 from homeassistant.components.binary_sensor import (
     BinarySensorDeviceClass,
     BinarySensorEntity,
@@ -12,21 +16,13 @@ from homeassistant.components.sensor import (
     SensorEntityDescription,
     SensorStateClass,
 )
-
-from homeassistant.helpers.typing import StateType
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
-
-from datetime import date, datetime
-from decimal import Decimal
-
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.entity import EntityCategory
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.typing import StateType
+from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
 
-from .netgear_switch import HAGS108Switch, HAGS108SwitchCoordinatorEntity
-
-import logging
+from .netgear_switch import HAGS108SwitchCoordinatorEntity, HomeAssistantNetgearSwitch
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -64,7 +60,7 @@ class NetgearRouterSensorEntity(HAGS108SwitchCoordinatorEntity, RestoreSensor):
     def __init__(
         self,
         coordinator: DataUpdateCoordinator,
-        switch: HAGS108Switch,
+        switch: HomeAssistantNetgearSwitch,
         entity_description: NetgearSensorEntityDescription,
     ) -> None:
         """Initialize a Netgear device."""
@@ -121,7 +117,7 @@ class NetgearRouterBinarySensorEntity(
     def __init__(
         self,
         coordinator: DataUpdateCoordinator,
-        switch: HAGS108Switch,
+        switch: HomeAssistantNetgearSwitch,
         entity_description: NetgearBinarySensorEntityDescription,
     ) -> None:
         """Initialize a Netgear device."""

@@ -21,7 +21,7 @@ from .const import (
     SCAN_INTERVAL,
 )
 from .errors import CannotLoginException
-from .netgear_switch import HAGS108Switch
+from .netgear_switch import HomeAssistantNetgearSwitch
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -30,7 +30,7 @@ SCAN_INTERVAL = timedelta(seconds=SCAN_INTERVAL)
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Set up Netgear component."""
-    gs_switch = HAGS108Switch(hass, entry)
+    gs_switch = HomeAssistantNetgearSwitch(hass, entry)
     try:
         if not await gs_switch.async_setup():
             raise ConfigEntryNotReady

@@ -1,28 +1,21 @@
 """Config flow to configure the Netgear integration."""
+
 from __future__ import annotations
 
 import logging
 from typing import cast
 from urllib.parse import urlparse
 
+import requests
 import voluptuous as vol
 
 from homeassistant import config_entries
-from homeassistant.const import (
-    CONF_HOST,
-    CONF_PASSWORD,
-    CONF_TIMEOUT,
-)
+from homeassistant.const import CONF_HOST, CONF_PASSWORD, CONF_TIMEOUT
 from homeassistant.core import callback
 from homeassistant.data_entry_flow import FlowResult
 from homeassistant.util.network import is_ipv4_address
 
-from .const import (
-    DEFAULT_NAME,
-    DOMAIN,
-    DEFAULT_HOST,
-    DEFAULT_CONF_TIMEOUT,
-)
+from .const import DEFAULT_CONF_TIMEOUT, DEFAULT_HOST, DEFAULT_NAME, DOMAIN
 from .errors import CannotLoginException
 from .netgear_switch import get_api
 
@@ -58,7 +51,9 @@ class OptionsFlowHandler(config_entries.OptionsFlow):
             {
                 vol.Optional(
                     CONF_TIMEOUT,
-                    default=self.config_entry.options.get(CONF_TIMEOUT, DEFAULT_CONF_TIMEOUT.total_seconds()),  # CONF_TIMEOUT = 'timeout'
+                    default=self.config_entry.options.get(
+                        CONF_TIMEOUT, DEFAULT_CONF_TIMEOUT.total_seconds()
+                    ),  # CONF_TIMEOUT = 'timeout'
                 ): int,
             }
         )
@@ -110,13 +105,26 @@ class NetgearFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
         host = user_input.get(CONF_HOST, self.placeholders[CONF_HOST])
         password = user_input[CONF_PASSWORD]
 
+        """
+        # Detect Switch Model
+        autodetect_model = await self.hass.async_add_executor_job(
+            api_autodetect_model, host, password
+        )
+        print(
+            "[config_flow.async_step_user] autodetect_model",
+            autodetect_model,
+        )
+        """
+
         # Open connection and check authentication
         try:
-            api = await self.hass.async_add_executor_job(
-                get_api, host, password
-            )
+            api = await self.hass.async_add_executor_job(get_api, host, password)
         except CannotLoginException:
             errors["base"] = "config"
+        except requests.exceptions.ConnectTimeout:
+            errors["base"] = "timeout"
+        except NotImplementedError:
+            errors["base"] = "not_implemented_error"
 
         if errors:
             return await self._show_setup_form(user_input, errors)
@@ -131,7 +139,9 @@ class NetgearFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
         await self.async_set_unique_id(unique_id, raise_on_progress=False)
         self._abort_if_unique_id_configured(updates=config_data)
 
-        name = f'GS108E {host}'
+        # set autodetected switch model name
+        model_name = api.switch_model.MODEL_NAME
+        name = f"{model_name} {host}"
 
         return self.async_create_entry(
             title=name,
