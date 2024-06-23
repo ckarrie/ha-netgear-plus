@@ -115,7 +115,7 @@ PORT_TEMPLATE = OrderedDict(
             "icon": "mdi:upload",
         },
         "port_{port}_speed_io_mbytes": {
-            "name": "Port {port} Receiving",
+            "name": "Port {port} IO",
             "native_unit_of_measurement": UnitOfDataRate.MEGABYTES_PER_SECOND,
             # 'unit_of_measurement': UnitOfInformation.GIGABYTES,
             "device_class": SensorDeviceClass.DATA_RATE,
@@ -150,6 +150,29 @@ PORT_TEMPLATE = OrderedDict(
     }
 )
 
+AGGREGATED_SENSORS = OrderedDict(
+    {
+        "sum_port_speed_bps_io": {
+            "name": "Switch IO",
+            "native_unit_of_measurement": UnitOfDataRate.MEGABYTES_PER_SECOND,
+            "device_class": SensorDeviceClass.DATA_RATE,
+            #'icon': "mdi:upload"
+        },
+        "sum_port_traffic_rx": {
+            "name": "Switch Traffic Received",
+            "native_unit_of_measurement": UnitOfInformation.MEGABYTES,
+            "device_class": SensorDeviceClass.DATA_SIZE,
+            "icon": "mdi:download",
+        },
+        "sum_port_traffic_tx": {
+            "name": "Switch Traffic Transferred",
+            "native_unit_of_measurement": UnitOfInformation.MEGABYTES,
+            "device_class": SensorDeviceClass.DATA_SIZE,
+            "icon": "mdi:upload",
+        },
+    }
+)
+
 
 async def async_setup_entry(
     hass: HomeAssistant, entry: ConfigEntry, async_add_entities: AddEntitiesCallback
@@ -178,25 +201,49 @@ async def async_setup_entry(
         "[sensor.async_setup_entry] setting up Platform.SENSOR for %d Switch Ports",
         ports_cnt,
     )
+
+    entity_descriptions_kwargs = []
+
+    # Adding port sensors
     for i in range(ports_cnt):
         port_nr = i + 1
         for port_sensor_key, port_sensor_data in PORT_TEMPLATE.items():
-            description = NetgearSensorEntityDescription(
-                key=port_sensor_key.format(port=port_nr),
-                name=port_sensor_data["name"].format(port=port_nr),
-                native_unit_of_measurement=port_sensor_data.get(
-                    "native_unit_of_measurement", None
-                ),
-                unit_of_measurement=port_sensor_data.get("unit_of_measurement", None),
-                device_class=port_sensor_data["device_class"],
-                icon=port_sensor_data.get("icon"),
+            entity_descriptions_kwargs.append(
+                {
+                    "key": port_sensor_key.format(port=port_nr),
+                    "name": port_sensor_data["name"].format(port=port_nr),
+                    "native_unit_of_measurement": port_sensor_data.get(
+                        "native_unit_of_measurement", None
+                    ),
+                    "unit_of_measurement": port_sensor_data.get(
+                        "unit_of_measurement", None
+                    ),
+                    "device_class": port_sensor_data["device_class"],
+                    "icon": port_sensor_data.get("icon"),
+                }
             )
-            port_sensor_entity = NetgearRouterSensorEntity(
-                coordinator=coordinator_switch_infos,
-                switch=gs_switch,
-                entity_description=description,
-            )
-            switch_entities.append(port_sensor_entity)
+
+    # Adding aggregated sensors
+    for sensor_key, sensor_data in AGGREGATED_SENSORS.items():
+        entity_descriptions_kwargs.append(
+            {
+                "key": sensor_key,
+                "name": sensor_data["name"],
+                "native_unit_of_measurement": sensor_data["native_unit_of_measurement"],
+                "unit_of_measurement": sensor_data.get("unit_of_measurement", None),
+                "device_class": sensor_data["device_class"],
+                "icon": sensor_data.get("icon"),
+            }
+        )
+
+    for description_kwargs in entity_descriptions_kwargs:
+        description = NetgearSensorEntityDescription(**description_kwargs)
+        port_sensor_entity = NetgearRouterSensorEntity(
+            coordinator=coordinator_switch_infos,
+            switch=gs_switch,
+            entity_description=description,
+        )
+        switch_entities.append(port_sensor_entity)
 
     async_add_entities(switch_entities)
     # commented next line, why was it there???

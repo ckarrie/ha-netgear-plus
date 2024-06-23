@@ -105,17 +105,6 @@ class NetgearFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
         host = user_input.get(CONF_HOST, self.placeholders[CONF_HOST])
         password = user_input[CONF_PASSWORD]
 
-        """
-        # Detect Switch Model
-        autodetect_model = await self.hass.async_add_executor_job(
-            api_autodetect_model, host, password
-        )
-        print(
-            "[config_flow.async_step_user] autodetect_model",
-            autodetect_model,
-        )
-        """
-
         # Open connection and check authentication
         try:
             api = await self.hass.async_add_executor_job(get_api, host, password)

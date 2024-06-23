@@ -23,12 +23,6 @@ from .gs108e import NetgearSwitchConnector
 _LOGGER = logging.getLogger(__name__)
 
 
-def api_autodetect_model(host: str, password: str):
-    api: NetgearSwitchConnector = NetgearSwitchConnector(host, password)
-    return api.autodetect_model()
-    # if autodetected_model in SUPPORTED_MODELS
-
-
 def get_api(host: str, password: str) -> NetgearSwitchConnector:
     """Get the Netgear API and login to it."""
     api: NetgearSwitchConnector = NetgearSwitchConnector(host, password)
