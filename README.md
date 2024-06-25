@@ -45,6 +45,16 @@ Grabs statistical network data from your Netgear GS108Ev3
 | Switch Traffic Received          | SENSOR        | `sum_port_traffic_rx`                   | MB (in response time)                |
 | Switch Traffic Transferred       | SENSOR        | `sum_port_traffic_tx`                   | MB (in response time)                |
 
+## Supported and tested Netgear Models/Products and firmwares
+
+| Model    | Ports    | Firmwares                                    | Bootloader          |
+|----------|----------|----------------------------------------------|---------------------|
+| GS105E   | 5        | ?                                            |                     |
+| GS108E   | 8        | V1.00.11                                     | V1.00.03            |
+| GS105Ev3 | 5        | ?                                            |                     |
+| GS108Ev3 | 8        | V2.00.05, V2.06.10, V2.06.17, V2.06.24       | V2.06.02, V2.06.03  |
+
+Supported firmware languages: GR (German), EN (English)
 
 ## How to integrate in your HomeAssistant
 
@@ -56,20 +66,50 @@ Grabs statistical network data from your Netgear GS108Ev3
 
 After adding the integration go to [Add Integration](https://my.home-assistant.io/redirect/integrations/) and select **Netgear GS108e Integration**.
 
+### Lovelance examples
 
-![image](https://user-images.githubusercontent.com/4140156/118571964-9ac0fa80-b77f-11eb-951e-a5e393157bd0.png)
+Example with [ha-sankey-chart](https://github.com/MindFreeze/ha-sankey-chart)
 
+![image](https://github.com/ckarrie/ckw-ha-gs108e/assets/4140156/9e8ca08f-bd64-4b49-8408-2135107c53f5)
 
-## Supported and tested Netgear Models/Products and firmwares
+Example with [mini-graph-card](https://github.com/kalkih/mini-graph-card)
 
-| Model    | Ports    | Firmwares                                    | Bootloader          |
-|----------|----------|----------------------------------------------|---------------------|
-| GS105E   | 5        | ?                                            |                     |
-| GS108E   | 8        | V1.00.11                                     | V1.00.03            |
-| GS105Ev3 | 5        | ?                                            |                     |
-| GS108Ev3 | 8        | V2.00.05, V2.06.10, V2.06.17, V2.06.24       | V2.06.02, V2.06.03  |
+![image](https://github.com/ckarrie/ckw-ha-gs108e/assets/4140156/2693a0fd-4dba-4d16-84fc-bd3ad5de927c)
 
-Supported firmware languages: GR (German), EN (English)
+```yaml
+type: custom:mini-graph-card
+entities:
+  - entity: sensor.gs108ev3_192_168_178_8_port_1_io
+    show_points: false
+    name: QNAP
+  - entity: sensor.gs108ev3_192_168_178_8_port_2_io
+    show_points: false
+    name: P2
+  - entity: sensor.gs108ev3_192_168_178_8_port_3_io
+    show_points: false
+    name: rpi4-001
+  - entity: sensor.gs108ev3_192_168_178_8_port_4_io
+    show_points: false
+    name: Telefon
+  - entity: sensor.gs108ev3_192_168_178_8_port_5_io
+    show_points: false
+    name: Unraid
+  - entity: sensor.gs108ev3_192_168_178_8_port_6_io
+    show_points: false
+    name: Drucker
+  - entity: sensor.gs108ev3_192_168_178_8_port_7_io
+    show_points: false
+    name: Beelink (HA)
+  - entity: sensor.gs108ev3_192_168_178_8_port_8_io
+    show_points: false
+    name: HomeOffice und WLAN
+hours_to_show: 0.1
+points_per_hour: 1000
+name: 192.168.178.8 - GS108Ev3 Büro
+line_width: 1
+animate: true
+```
+
 
 ## ToDo
 - move integrated gs108e module into a seperate Python library (get rid of gs108e wording)
