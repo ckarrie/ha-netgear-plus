@@ -235,7 +235,9 @@ class NetgearSwitchConnector:
 
         # Handling Error Messages
         error_msg = None
-        if isinstance(self.switch_model, (models.GS308EP, models.GS305EP)):
+        if isinstance(
+            self.switch_model, (models.GS305EP, models.GS308EP, models.GS316EP)
+        ):
             error_msg = tree.xpath('//div[@class="pwdErrStyle"]')
             if error_msg:
                 error_msg = error_msg[0].text
@@ -272,7 +274,9 @@ class NetgearSwitchConnector:
             return None
 
     def fetch_switch_infos(self, url_tmpl=SWITCH_INFO_HTM_URL_TMPL):
-        if isinstance(self.switch_model, (models.GS308EP, models.GS305EP)):
+        if isinstance(
+            self.switch_model, (models.GS305EP, models.GS308EP, models.GS316EP)
+        ):
             url_tmpl = self.switch_model.DASHBOARD_CGI_URL_TMPL
         url = url_tmpl.format(ip=self.host)
         method = "get"
@@ -314,7 +318,9 @@ class NetgearSwitchConnector:
             int32 = 4294967296
             return int(input_1, base) * int32 + int(input_2, base)
 
-        if isinstance(self.switch_model, (models.GS308EP, models.GS305EP)):
+        if isinstance(
+            self.switch_model, (models.GS305EP, models.GS308EP, models.GS316EP)
+        ):
             rx = []
             tx = []
             crc = []
@@ -378,7 +384,9 @@ class NetgearSwitchConnector:
     def _parse_port_status(self, tree):
         status_by_port = {}
 
-        if isinstance(self.switch_model, (models.GS305EP, models.GS308EP)):
+        if isinstance(
+            self.switch_model, (models.GS305EP, models.GS308EP, models.GS316EP)
+        ):
             for port0 in range(self.ports):
                 port_nr = port0 + 1
                 xtree_port = tree.xpath(f'//div[@name="isShowPot{port_nr}"]')[0]
@@ -444,7 +452,7 @@ class NetgearSwitchConnector:
         # print("Port Status", self.port_status)
         return status_by_port
 
-    def _get_gs30x_switch_info(self, tree, text):
+    def _get_gs3xx_switch_info(self, tree, text):
         span_node = tree.xpath(f'//span[text()="{text}"]')
         if span_node:
             for child_span in (
@@ -462,8 +470,10 @@ class NetgearSwitchConnector:
                 return None
             tree = html.fromstring(page.content)
 
-            if isinstance(self.switch_model, (models.GS305EP, models.GS308EP)):
-                switch_serial_number = self._get_gs30x_switch_info(
+            if isinstance(
+                self.switch_model, (models.GS305EP, models.GS308EP, models.GS316EP)
+            ):
+                switch_serial_number = self._get_gs3xx_switch_info(
                     tree=tree, text="ml198"
                 )
                 switch_name = tree.xpath('//div[@id="switch_name"]')[0].text
@@ -535,7 +545,9 @@ class NetgearSwitchConnector:
 
         # Fetch Port Status
         time.sleep(self.sleep_time)
-        if isinstance(self.switch_model, (models.GS305EP, models.GS308EP)):
+        if isinstance(
+            self.switch_model, (models.GS305EP, models.GS308EP, models.GS316EP)
+        ):
             page_port_status = self.fetch_switch_infos()
             tree_page_port_status = html.fromstring(page_port_status.content)
             port_status = self._parse_port_status(tree=tree_page_port_status)

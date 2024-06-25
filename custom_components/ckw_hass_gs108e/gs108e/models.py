@@ -73,12 +73,11 @@ class GS305EP(AutodetectedSwitchModel):
     DASHBOARD_CGI_URL_TMPL = "http://{ip}/dashboard.cgi"
 
 
-class GS308EP(AutodetectedSwitchModel):
+class GS308EP(GS305EP):
     MODEL_NAME = "GS308EP"
     PORTS = 8
-    POE_SUPPORT = True
-    CHECKS_AND_RESULTS = [
-        ("check_login_form_rand", [True]),
-        ("check_login_title_tag", ["GS308EP"]),
-    ]
-    DASHBOARD_CGI_URL_TMPL = "http://{ip}/dashboard.cgi"
+
+
+class GS316EP(GS305EP):
+    MODEL_NAME = "GS316EP"
+    PORTS = 16
