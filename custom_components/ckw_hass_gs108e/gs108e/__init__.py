@@ -27,7 +27,7 @@ def _reduce_digits(v):
     return float("{:.2f}".format(round(v * bytes_to_mbytes, 2)))
 
 
-PORT_STATUS_CONNECTED = ["Aktiv", "Up"]
+PORT_STATUS_CONNECTED = ["Aktiv", "Up", "UP"]
 PORT_MODUS_SPEED = ["Auto"]
 
 MODELS = [
@@ -215,8 +215,9 @@ class NetgearSwitchConnector:
         login_password = self.get_login_password()
         url = LOGIN_CGI_URL_TMPL.format(ip=self.host)
         _LOGGER.info(
-            "[NetgearSwitchConnector.get_login_cookie] calling request.post for url=%s with login_password",
+            "[NetgearSwitchConnector.get_login_cookie] calling request.post for url=%s with login_password=%s",
             url,
+            login_password,
         )
         response = requests.post(
             url,
@@ -231,14 +232,21 @@ class NetgearSwitchConnector:
                 self.cookie_content = cookie
                 return True
         tree = html.fromstring(response.content)
-        error_msg = tree.xpath('//input[@id="err_msg"]')
-        if error_msg:
-            error_msg = error_msg[0].value
+
+        # Handling Error Messages
+        error_msg = None
+        if isinstance(self.switch_model, (models.GS308EP, models.GS305EP)):
+            error_msg = tree.xpath('//div[@class="pwdErrStyle"]')
+            if error_msg:
+                error_msg = error_msg[0].text
+        else:
+            error_msg = tree.xpath('//input[@id="err_msg"]')
+            if error_msg:
+                error_msg = error_msg[0].value
+        if error_msg is not None:
             print(
                 f'[ckw_hass_gs108e.get_login_cookie] [IP: {self.host}] Response from switch: "{error_msg}", sleeping for 5 minutes now'
             )
-            # 5 Minutes pause
-            # time.sleep(5 * 60)
         return False
 
     def _request(self, method, url, data=None, timeout=None, allow_redirects=False):
@@ -302,86 +310,148 @@ class NetgearSwitchConnector:
                 new_lst.extend([0] * diff)
             return new_lst
 
-        match_bootloader = self._switch_bootloader in API_V2_CHECKS["bootloader"]
-        match_firmware = (
-            self._loaded_switch_infos.get("switch_firmware", "")
-            in API_V2_CHECKS["firmware"]
-        )
+        def convert_gs30x_to_int(input_1, input_2, base=10):
+            int32 = 4294967296
+            return int(input_1, base) * int32 + int(input_2, base)
 
-        if match_bootloader or match_firmware:
-            rx_elems = tree.xpath('//input[@name="rxPkt"]')
-            tx_elems = tree.xpath('//input[@name="txpkt"]')
-            crc_elems = tree.xpath('//input[@name="crcPkt"]')
+        if isinstance(self.switch_model, (models.GS308EP, models.GS305EP)):
+            rx = []
+            tx = []
+            crc = []
+            port_i = 0
 
-            # convert to int (base 16)
-            rx = convert_to_int(
-                rx_elems, output_elems=self.ports, base=16, attr_name="value"
-            )
-            tx = convert_to_int(
-                tx_elems, output_elems=self.ports, base=16, attr_name="value"
-            )
-            crc = convert_to_int(
-                crc_elems, output_elems=self.ports, base=16, attr_name="value"
-            )
+            for port0 in range(self.ports):
+                page_inputs = tree.xpath('//input[@type="hidden"]')
+                print("port_i", port_i, "page_inputs", page_inputs)
+                input_1_text = page_inputs[port_i].value
+                input_2_text = page_inputs[port_i + 1].value
+                rx.append(convert_gs30x_to_int(input_1_text, input_2_text))
+
+                input_3_text = page_inputs[port_i + 2].value
+                input_4_text = page_inputs[port_i + 3].value
+                tx.append(convert_gs30x_to_int(input_3_text, input_4_text))
+
+                crc.append(0)
+
+                port_i += 4
 
         else:
-            rx_elems = tree.xpath('//tr[@class="portID"]/td[2]')
-            tx_elems = tree.xpath('//tr[@class="portID"]/td[3]')
-            crc_elems = tree.xpath('//tr[@class="portID"]/td[4]')
+            match_bootloader = self._switch_bootloader in API_V2_CHECKS["bootloader"]
+            match_firmware = (
+                self._loaded_switch_infos.get("switch_firmware", "")
+                in API_V2_CHECKS["firmware"]
+            )
 
-            # convert to int (base 10)
-            rx = convert_to_int(
-                rx_elems, output_elems=self.ports, base=10, attr_name="text"
-            )
-            tx = convert_to_int(
-                tx_elems, output_elems=self.ports, base=10, attr_name="text"
-            )
-            crc = convert_to_int(
-                crc_elems, output_elems=self.ports, base=10, attr_name="text"
-            )
+            if match_bootloader or match_firmware:
+                rx_elems = tree.xpath('//input[@name="rxPkt"]')
+                tx_elems = tree.xpath('//input[@name="txpkt"]')
+                crc_elems = tree.xpath('//input[@name="crcPkt"]')
+
+                # convert to int (base 16)
+                rx = convert_to_int(
+                    rx_elems, output_elems=self.ports, base=16, attr_name="value"
+                )
+                tx = convert_to_int(
+                    tx_elems, output_elems=self.ports, base=16, attr_name="value"
+                )
+                crc = convert_to_int(
+                    crc_elems, output_elems=self.ports, base=16, attr_name="value"
+                )
+
+            else:
+                rx_elems = tree.xpath('//tr[@class="portID"]/td[2]')
+                tx_elems = tree.xpath('//tr[@class="portID"]/td[3]')
+                crc_elems = tree.xpath('//tr[@class="portID"]/td[4]')
+
+                # convert to int (base 10)
+                rx = convert_to_int(
+                    rx_elems, output_elems=self.ports, base=10, attr_name="text"
+                )
+                tx = convert_to_int(
+                    tx_elems, output_elems=self.ports, base=10, attr_name="text"
+                )
+                crc = convert_to_int(
+                    crc_elems, output_elems=self.ports, base=10, attr_name="text"
+                )
         return rx, tx, crc
 
     def _parse_port_status(self, tree):
         status_by_port = {}
 
-        match_bootloader = self._switch_bootloader in API_V2_CHECKS["bootloader"]
-        match_firmware = (
-            self._loaded_switch_infos.get("switch_firmware", "")
-            in API_V2_CHECKS["firmware"]
-        )
+        if isinstance(self.switch_model, (models.GS305EP, models.GS308EP)):
+            for port0 in range(self.ports):
+                port_nr = port0 + 1
+                xtree_port = tree.xpath(f'//div[@name="isShowPot{port_nr}"]')[0]
+                port_state_text = xtree_port[1][0].text
 
-        if match_bootloader or match_firmware:
-            # port_elems = tree.xpath('//tr[@class="portID"]/td[2]')
-            portstatus_elems = tree.xpath('//tr[@class="portID"]/td[3]')
-            portspeed_elems = tree.xpath('//tr[@class="portID"]/td[4]')
-            portconnectionspeed_elems = tree.xpath('//tr[@class="portID"]/td[5]')
+                modus_speed_text = tree.xpath(f'//input[@class="Speed"]')[port0].value
+                if modus_speed_text == "1":
+                    modus_speed_text = "Auto"
+                connection_speed_text = tree.xpath(f'//input[@class="LinkedSpeed"]')[
+                    port0
+                ].value
+                connection_speed_text = (
+                    connection_speed_text.replace("full", "")
+                    .replace("half", "")
+                    .strip()
+                )
 
-            for port_nr in range(self.ports):
-                try:
-                    status_text = portstatus_elems[port_nr].text.replace("\n", "")
-                    modus_speed_text = portspeed_elems[port_nr].text.replace("\n", "")
-                    connection_speed_text = portconnectionspeed_elems[
-                        port_nr
-                    ].text.replace("\n", "")
-                except (IndexError, AttributeError):
-                    status_text = self.port_status.get(port_nr + 1, {}).get(
-                        "status", None
-                    )
-                    modus_speed_text = self.port_status.get(port_nr + 1, {}).get(
-                        "modus_speed", None
-                    )
-                    connection_speed_text = self.port_status.get(port_nr + 1, {}).get(
-                        "connection_speed", None
-                    )
-                status_by_port[port_nr + 1] = {
-                    "status": status_text,
+                status_by_port[port_nr] = {
+                    "status": port_state_text,
                     "modus_speed": modus_speed_text,
                     "connection_speed": connection_speed_text,
                 }
 
+        else:
+            match_bootloader = self._switch_bootloader in API_V2_CHECKS["bootloader"]
+            match_firmware = (
+                self._loaded_switch_infos.get("switch_firmware", "")
+                in API_V2_CHECKS["firmware"]
+            )
+
+            if match_bootloader or match_firmware:
+                # port_elems = tree.xpath('//tr[@class="portID"]/td[2]')
+                portstatus_elems = tree.xpath('//tr[@class="portID"]/td[3]')
+                portspeed_elems = tree.xpath('//tr[@class="portID"]/td[4]')
+                portconnectionspeed_elems = tree.xpath('//tr[@class="portID"]/td[5]')
+
+                for port_nr in range(self.ports):
+                    try:
+                        status_text = portstatus_elems[port_nr].text.replace("\n", "")
+                        modus_speed_text = portspeed_elems[port_nr].text.replace(
+                            "\n", ""
+                        )
+                        connection_speed_text = portconnectionspeed_elems[
+                            port_nr
+                        ].text.replace("\n", "")
+                    except (IndexError, AttributeError):
+                        status_text = self.port_status.get(port_nr + 1, {}).get(
+                            "status", None
+                        )
+                        modus_speed_text = self.port_status.get(port_nr + 1, {}).get(
+                            "modus_speed", None
+                        )
+                        connection_speed_text = self.port_status.get(
+                            port_nr + 1, {}
+                        ).get("connection_speed", None)
+                    status_by_port[port_nr + 1] = {
+                        "status": status_text,
+                        "modus_speed": modus_speed_text,
+                        "connection_speed": connection_speed_text,
+                    }
+
         self.port_status = status_by_port
         # print("Port Status", self.port_status)
         return status_by_port
+
+    def _get_gs30x_switch_info(self, tree, text):
+        span_node = tree.xpath(f'//span[text()="{text}"]')
+        if span_node:
+            for child_span in (
+                span_node[0].getparent().getnext().iterchildren(tag="span")
+            ):
+                return child_span.text
+        return None
 
     def get_switch_infos(self):
         switch_data = {}
@@ -392,15 +462,12 @@ class NetgearSwitchConnector:
                 return None
             tree = html.fromstring(page.content)
 
-            if isinstance(self.switch_model, (models.GS308EP, models.GS305EP)):
-                raise NotImplementedError
-                serial_span_node = tree.xpath(
-                    '//span[text()="ml198"]/preceding-sibling::'
+            if isinstance(self.switch_model, (models.GS305EP, models.GS308EP)):
+                switch_serial_number = self._get_gs30x_switch_info(
+                    tree=tree, text="ml198"
                 )
-                if serial_span_node:
-                    parent_div = serial_span_node[0].getparent()
-
-                # switch_serial_number =
+                switch_name = tree.xpath('//div[@id="switch_name"]')[0].text
+                switch_firmware = self._get_gs30x_switch_info(tree=tree, text="ml089")
 
             else:
                 # switch_info.htm:
@@ -433,14 +500,14 @@ class NetgearSwitchConnector:
                 # print("switch_firmware", switch_firmware)
                 # print("switch_serial_number", switch_serial_number)
 
-                # Avoid a second call on next get_switch_infos() call
-                self._loaded_switch_infos = {
-                    "switch_ip": self.host,
-                    "switch_name": switch_name,
-                    "switch_bootloader": self._switch_bootloader,
-                    "switch_firmware": switch_firmware,
-                    "switch_serial_number": switch_serial_number,
-                }
+            # Avoid a second call on next get_switch_infos() call
+            self._loaded_switch_infos = {
+                "switch_ip": self.host,
+                "switch_name": switch_name,
+                "switch_bootloader": self._switch_bootloader,
+                "switch_firmware": switch_firmware,
+                "switch_serial_number": switch_serial_number,
+            }
 
         switch_data.update(**self._loaded_switch_infos)
 
@@ -468,9 +535,14 @@ class NetgearSwitchConnector:
 
         # Fetch Port Status
         time.sleep(self.sleep_time)
-        page_port_status = self.fetch_port_status(client_hash=self._client_hash)
-        tree_page_port_status = html.fromstring(page_port_status.content)
-        port_status = self._parse_port_status(tree=tree_page_port_status)
+        if isinstance(self.switch_model, (models.GS305EP, models.GS308EP)):
+            page_port_status = self.fetch_switch_infos()
+            tree_page_port_status = html.fromstring(page_port_status.content)
+            port_status = self._parse_port_status(tree=tree_page_port_status)
+        else:
+            page_port_status = self.fetch_port_status(client_hash=self._client_hash)
+            tree_page_port_status = html.fromstring(page_port_status.content)
+            port_status = self._parse_port_status(tree=tree_page_port_status)
 
         sample_time = _start_time - self._previous_timestamp
         sample_factor = 1 / sample_time
