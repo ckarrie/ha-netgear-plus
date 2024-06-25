@@ -548,9 +548,11 @@ class NetgearSwitchConnector:
         if isinstance(
             self.switch_model, (models.GS305EP, models.GS308EP, models.GS316EP)
         ):
-            page_port_status = self.fetch_switch_infos()
-            tree_page_port_status = html.fromstring(page_port_status.content)
-            port_status = self._parse_port_status(tree=tree_page_port_status)
+            dashboard_page_port_status = self.fetch_switch_infos()
+            tree_dashboard_ppage_port_status = html.fromstring(
+                dashboard_page_port_status.content
+            )
+            port_status = self._parse_port_status(tree=tree_dashboard_ppage_port_status)
         else:
             page_port_status = self.fetch_port_status(client_hash=self._client_hash)
             tree_page_port_status = html.fromstring(page_port_status.content)
