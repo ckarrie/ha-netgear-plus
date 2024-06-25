@@ -76,8 +76,16 @@ class GS305EP(AutodetectedSwitchModel):
 class GS308EP(GS305EP):
     MODEL_NAME = "GS308EP"
     PORTS = 8
+    CHECKS_AND_RESULTS = [
+        ("check_login_form_rand", [True]),
+        ("check_login_title_tag", ["GS308EP"]),
+    ]
 
 
 class GS316EP(GS305EP):
     MODEL_NAME = "GS316EP"
     PORTS = 16
+    CHECKS_AND_RESULTS = [
+        ("check_login_form_rand", [True]),
+        ("check_login_title_tag", ["GS316EP"]),
+    ]
