@@ -74,7 +74,8 @@ Example with [ha-sankey-chart](https://github.com/MindFreeze/ha-sankey-chart)
 
 Example with [mini-graph-card](https://github.com/kalkih/mini-graph-card)
 
-![image](https://github.com/ckarrie/ckw-ha-gs108e/assets/4140156/2693a0fd-4dba-4d16-84fc-bd3ad5de927c)
+![image](https://github.com/ckarrie/ckw-ha-gs108e/assets/4140156/9f390bab-6d3e-4e9c-83df-39bd230d7309)
+
 
 ```yaml
 type: custom:mini-graph-card
