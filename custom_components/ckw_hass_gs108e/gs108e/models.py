@@ -62,7 +62,11 @@ class GS108Ev3(AutodetectedSwitchModel):
     ]
 
 
-class GS305EP(AutodetectedSwitchModel):
+class GS3xxSeries(AutodetectedSwitchModel):
+    pass
+
+
+class GS305EP(GS3xxSeries):
     MODEL_NAME = "GS305EP"
     PORTS = 5
     POE_SUPPORT = True
@@ -73,7 +77,7 @@ class GS305EP(AutodetectedSwitchModel):
     DASHBOARD_CGI_URL_TMPL = "http://{ip}/dashboard.cgi"
 
 
-class GS308EP(GS305EP):
+class GS308EP(GS3xxSeries):
     MODEL_NAME = "GS308EP"
     PORTS = 8
     CHECKS_AND_RESULTS = [
@@ -82,7 +86,7 @@ class GS308EP(GS305EP):
     ]
 
 
-class GS316EP(GS305EP):
+class GS316EP(GS3xxSeries):
     MODEL_NAME = "GS316EP"
     PORTS = 16
     CHECKS_AND_RESULTS = [
