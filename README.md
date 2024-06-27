@@ -2,12 +2,12 @@
 HomeAssistant Netgear Switch Integration
 
 ## What it does
-Grabs statistical network data from your Netgear GS108Ev3
+Grabs statistical network data from [supported Netgear Switches](#supported-and-tested-netgear-modelsproducts-and-firmwares)
 
 ## How it works
 1. Detecting Switch Model/Product in login.cgi
 2. Connects to the Switch and asks for a cookie (`http://IP_OF_SWITCH/login.cgi`)
-3. HTTP-Request send to the Switch twice (`http://IP_OF_SWITCH/portStatistics.cgi`) and compared with previous data ("in response time)
+3. HTTP-Request send to the Switch twice (`http://IP_OF_SWITCH/portStatistics.cgi`) and compared with previous data ("in response time")
 
 ## Which entities
 - overall Switch statistics as attributes
@@ -15,9 +15,9 @@ Grabs statistical network data from your Netgear GS108Ev3
   - Diagnostic Sensor: `response_time_s` - Response time of two requests send to the Switch to calculate the traffic speed
   - ...
 - statistics for each Port (8 Ports for GS108Ev3) as attributes
-  - `port_{port}_receiving` - receiving traffic on {port} in MB/s
-  - `port_{port}_total_received` - total received traffic on {port} in MB
-  - `port_{port}_total_transferred` - total transferred traffic on {port} in MB
+  - `port_{port}_receiving` - receiving traffic on `{port}` in MB/s
+  - `port_{port}_total_received` - total received traffic on `{port}` in MB
+  - `port_{port}_total_transferred` - total transferred traffic on `{port}` in MB
   - ...
 - status for each port
   - Binary Sensor: `port_{port}_status` - port cable connected/disconnected
