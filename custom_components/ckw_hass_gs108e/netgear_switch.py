@@ -77,7 +77,7 @@ class HomeAssistantNetgearSwitch:
             return await self.hass.async_add_executor_job(self.api.get_switch_infos)
 
 
-class HAGS108SwitchCoordinatorEntity(CoordinatorEntity):
+class NetgearAPICoordinatorEntity(CoordinatorEntity):
     """Base class for a Netgear router entity."""
 
     def __init__(

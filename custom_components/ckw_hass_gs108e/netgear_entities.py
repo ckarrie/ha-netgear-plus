@@ -16,13 +16,15 @@ from homeassistant.components.sensor import (
     SensorEntityDescription,
     SensorStateClass,
 )
+from homeassistant.components.switch import SwitchEntity
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.entity import EntityCategory
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.typing import StateType
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
 
-from .netgear_switch import HAGS108SwitchCoordinatorEntity, HomeAssistantNetgearSwitch
+from .netgear_switch import NetgearAPICoordinatorEntity, HomeAssistantNetgearSwitch
+from . import const
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -51,7 +53,7 @@ class NetgearBinarySensorEntityDescription(BinarySensorEntityDescription):
     native_precision = None
 
 
-class NetgearRouterSensorEntity(HAGS108SwitchCoordinatorEntity, RestoreSensor):
+class NetgearRouterSensorEntity(NetgearAPICoordinatorEntity, RestoreSensor):
     """Representation of a device connected to a Netgear router."""
 
     # _attr_entity_registry_enabled_default = False
@@ -105,9 +107,7 @@ class NetgearRouterSensorEntity(HAGS108SwitchCoordinatorEntity, RestoreSensor):
         self._value = self.entity_description.value(data)
 
 
-class NetgearRouterBinarySensorEntity(
-    HAGS108SwitchCoordinatorEntity, BinarySensorEntity
-):
+class NetgearRouterBinarySensorEntity(NetgearAPICoordinatorEntity, BinarySensorEntity):
     """Representation of a device connected to a Netgear router."""
 
     # _attr_entity_registry_enabled_default = False
@@ -151,7 +151,7 @@ class NetgearRouterBinarySensorEntity(
     @property
     def is_on(self) -> bool:
         """Return binary sensor state."""
-        return self._value == "on"
+        return self._value in const.ON_VALUES
 
     @callback
     def async_update_device(self) -> None:
@@ -171,3 +171,70 @@ class NetgearRouterBinarySensorEntity(
             return
 
         self._value = _value
+
+
+class NetgearPOESwitchEntity(NetgearAPICoordinatorEntity, SwitchEntity):
+    """Represents a POE On/Off Power Switch in HomeAssistant."""
+
+    entity_description = NetgearBinarySensorEntityDescription
+
+    def __init__(
+        self,
+        coordinator: DataUpdateCoordinator,
+        hub: HomeAssistantNetgearSwitch,
+        entity_description: NetgearBinarySensorEntityDescription,
+        port_nr: int | None = None,
+    ) -> None:
+        """Initialize a Netgear device."""
+        super().__init__(coordinator, hub)
+        self.entity_description = entity_description
+        self._name = f"{hub.device_name} {entity_description.name}"
+        self._unique_id = (
+            f"{hub.unique_id}-{entity_description.key}-{entity_description.index}"
+        )
+        self.port_nr = port_nr
+        self._value = None
+        self.hub = hub
+
+    def __repr__(self):
+        return f"<NetgearPOESwitchEntity unique_id={self._unique_id} port_nr={self.port_nr}>"
+
+    @callback
+    def async_update_device(self) -> None:
+        if self.coordinator.data is None:
+            return
+
+        data = self.coordinator.data.get(self.entity_description.key)
+        if data is None:
+            self._value = None
+            _LOGGER.debug(
+                "key '%s' not in Netgear router response '%s'",
+                self.entity_description.key,
+                data,
+            )
+            return
+
+        self._value = self.entity_description.value(data)
+
+    @property
+    def is_on(self):
+        """Return true if device is on."""
+        return self._value in const.ON_VALUES
+
+    async def async_turn_on(self, **kwargs):
+        successful = await self.hub.hass.async_add_executor_job(
+            self.hub.api.turn_on_poe_port, self.port_nr
+        )
+        self._value = "on" if successful else "off"
+        _LOGGER.info(
+            f"called turn_on_poe_port for port {self.port_nr}: successful={successful}"
+        )
+
+    async def async_turn_off(self, **kwargs):
+        successful = self.hub.hass.async_add_executor_job(
+            self.hub.api.turn_off_poe_port, self.port_nr
+        )
+        self._value = "off" if successful else "on"
+        _LOGGER.info(
+            f"called turn_off_poe_port for port {self.port_nr}: successful={successful}"
+        )

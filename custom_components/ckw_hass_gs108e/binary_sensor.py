@@ -33,7 +33,7 @@ from .netgear_entities import (
     NetgearBinarySensorEntityDescription,
     NetgearRouterBinarySensorEntity,
 )
-from .netgear_switch import HAGS108SwitchCoordinatorEntity, HomeAssistantNetgearSwitch
+from .netgear_switch import NetgearAPICoordinatorEntity, HomeAssistantNetgearSwitch
 
 _LOGGER = logging.getLogger(__name__)
 
