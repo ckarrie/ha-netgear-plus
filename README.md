@@ -36,6 +36,7 @@ Grabs statistical network data from your Netgear GS108Ev3
 | Port {port} Total Transferred    | SENSOR        | `port_{port}_sum_tx_mbytes`             | MB (since last switch reboot/reset)  |
 | Port {port} Connection Speed     | SENSOR        | `port_{port}_connection_speed`          | MB/s                                 |
 | Port {port} Status               | BINARY_SENSOR | `port_{port}_status`                    | "on"/"off"                           |
+| Port {poe_port} POE Power        | SWITCH        | `port_{poe_port}_poe_power_active`      | "on"/"off"                           |
 
 ### List of aggregated sensors
 
@@ -52,7 +53,8 @@ Grabs statistical network data from your Netgear GS108Ev3
 | GS105E   | 5        | ?                                            |                     |
 | GS108E   | 8        | V1.00.11                                     | V1.00.03            |
 | GS105Ev3 | 5        | ?                                            |                     |
-| GS108Ev3 | 8        | V2.00.05, V2.06.10, V2.06.17, V2.06.24       | V2.06.02, V2.06.03  |
+| GS108Ev3 | 8        | V2.00.05, V2.06.10, V2.06.17, V2.06.24       | V2.06.01 - V2.06.03 |
+| GS305EP  | 5        | V1.0.1.1                                     |                     |
 
 Supported firmware languages: GR (German), EN (English)
 
