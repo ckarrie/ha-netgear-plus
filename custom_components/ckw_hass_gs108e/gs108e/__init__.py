@@ -14,6 +14,7 @@ SWITCH_INFO_HTM_URL_TMPL = "http://{ip}/switch_info.htm"
 SWITCH_INFO_CGI_URL_TMPL = "http://{ip}/switch_info.cgi"
 PORT_STATISTICS_URL_TMPL = "http://{ip}/portStatistics.cgi"
 PORT_STATUS_URL_TMPL = "http://{ip}/status.htm"
+POE_PORT_CONFIG_CGI_URL = "http://{ip}/PoEPortConfig.cgi"
 ALLOWED_COOKIE_TYPES = ["GS108SID", "SID"]
 
 API_V2_CHECKS = {
@@ -29,6 +30,8 @@ def _reduce_digits(v):
 
 PORT_STATUS_CONNECTED = ["Aktiv", "Up", "UP"]
 PORT_MODUS_SPEED = ["Auto"]
+PORT_POE_POWER_IS_ON_VALUES = []
+
 
 MODELS = [
     models.GS105E,
@@ -62,7 +65,7 @@ class NetgearSwitchConnector:
         # initial values
         self.switch_model = None
         self.ports = 0
-        self.poe_support = False
+        self.poe_ports = None
         self.port_status = {}
         self._switch_bootloader = "unknown"
 
@@ -140,7 +143,7 @@ class NetgearSwitchConnector:
         if switch_model:
             self.switch_model = switch_model
             self.ports = switch_model.PORTS
-            self.poe_support = switch_model.POE_SUPPORT
+            self.poe_ports = switch_model.POE_PORTS
             self._previous_data = {
                 "tx": [0] * self.ports,
                 "rx": [0] * self.ports,
@@ -244,8 +247,8 @@ class NetgearSwitchConnector:
             if error_msg:
                 error_msg = error_msg[0].value
         if error_msg is not None:
-            print(
-                f'[ckw_hass_gs108e.get_login_cookie] [IP: {self.host}] Response from switch: "{error_msg}", sleeping for 5 minutes now'
+            _LOGGER.warning(
+                f'[ckw_hass_gs108e.get_login_cookie] [IP: {self.host}] Response from switch: "{error_msg}"'
             )
         return False
 
@@ -296,6 +299,15 @@ class NetgearSwitchConnector:
         url = PORT_STATUS_URL_TMPL.format(ip=self.host)
         method = "get"
         return self._request(url=url, method=method)
+
+    def fetch_poeportconfig(self):
+        if isinstance(self.switch_model, models.GS3xxSeries):
+            url = POE_PORT_CONFIG_CGI_URL.format(ip=self.host)
+            method = "get"
+            data = None
+            return self._request(
+                url=url, method=method, data=data, allow_redirects=False
+            )
 
     def _parse_port_statistics(self, tree):
         # convert to int
@@ -453,6 +465,13 @@ class NetgearSwitchConnector:
         # print("Port Status", self.port_status)
         return status_by_port
 
+    def _parse_poe_port_status(self, tree):
+        status_by_port = {}
+        poe_port_power_x = tree.xpath('//input[@id="hidPortPwr"]')
+        for i, x in enumerate(poe_port_power_x):
+            status_by_port[i + 1] = "on" if x.value == "1" else "off"
+        return status_by_port
+
     def _get_gs3xx_switch_info(self, tree, text):
         span_node = tree.xpath(f'//span[text()="{text}"]')
         if span_node:
@@ -500,14 +519,16 @@ class NetgearSwitchConnector:
                     self._switch_bootloader = switch_bootloader_x[0].text
                 if switch_serial_number_x:
                     switch_serial_number = switch_serial_number_x[0].text
-                if client_hash_x:
-                    self._client_hash = client_hash_x[0].value
 
                 # print("switch_name", switch_name)
                 # print("switch_bootloader", switch_bootloader)
                 # print("client_hash", client_hash)
                 # print("switch_firmware", switch_firmware)
                 # print("switch_serial_number", switch_serial_number)
+
+            client_hash_x = tree.xpath('//input[@id="hash"]')
+            if client_hash_x:
+                self._client_hash = client_hash_x[0].value
 
             # Avoid a second call on next get_switch_infos() call
             self._loaded_switch_infos = {
@@ -523,8 +544,10 @@ class NetgearSwitchConnector:
         # Hold fire
         time.sleep(self.sleep_time)
 
-        page = self.fetch_port_statistics(client_hash=self._client_hash)
-        if not page:
+        response_portstatistics = self.fetch_port_statistics(
+            client_hash=self._client_hash
+        )
+        if not response_portstatistics:
             return None
 
         # init values
@@ -537,23 +560,31 @@ class NetgearSwitchConnector:
         _start_time = time.perf_counter()
 
         # Parse content
-        tree = html.fromstring(page.content)
-        rx1, tx1, crc1 = self._parse_port_statistics(tree=tree)
+        tree_portstatistics = html.fromstring(response_portstatistics.content)
+        rx1, tx1, crc1 = self._parse_port_statistics(tree=tree_portstatistics)
         io_zeros = [0] * self.ports
         current_data = {"rx": rx1, "tx": tx1, "crc": crc1, "io": io_zeros}
 
         # Fetch Port Status
         time.sleep(self.sleep_time)
         if isinstance(self.switch_model, (models.GS3xxSeries)):
-            dashboard_page_port_status = self.fetch_switch_infos()
-            tree_dashboard_ppage_port_status = html.fromstring(
-                dashboard_page_port_status.content
-            )
-            port_status = self._parse_port_status(tree=tree_dashboard_ppage_port_status)
+            response_dashboard = self.fetch_switch_infos()
+            tree_response_dashboard = html.fromstring(response_dashboard.content)
+            port_status = self._parse_port_status(tree=tree_response_dashboard)
         else:
-            page_port_status = self.fetch_port_status(client_hash=self._client_hash)
-            tree_page_port_status = html.fromstring(page_port_status.content)
-            port_status = self._parse_port_status(tree=tree_page_port_status)
+            response_portstatus = self.fetch_port_status(client_hash=self._client_hash)
+            tree_portstatus = html.fromstring(response_portstatus.content)
+            port_status = self._parse_port_status(tree=tree_portstatus)
+
+        # Fetch POE Port Status
+        if isinstance(self.switch_model, (models.GS3xxSeries)):
+            time.sleep(self.sleep_time)
+            response_poeportconfig = self.fetch_poeportconfig()
+            tree_poeportconfig = html.fromstring(response_poeportconfig.content)
+            poe_port_status = self._parse_poe_port_status(tree=tree_poeportconfig)
+
+            for poe_port_nr, poe_power_status in poe_port_status.items():
+                switch_data[f"port_{poe_port_nr}_poe_power_active"] = poe_power_status
 
         sample_time = _start_time - self._previous_timestamp
         sample_factor = 1 / sample_time
@@ -629,27 +660,28 @@ class NetgearSwitchConnector:
             port_status_is_connected = (
                 switch_data.get(f"port_{port_number}_status", "off") == "on"
             )
-            if port_sum_rx <= 0:
-                port_sum_rx = self._previous_data["rx"][port_number0]
-                current_data["rx"][port_number0] = port_sum_rx
-                if port_status_is_connected:
-                    _LOGGER.info(
-                        f"Fallback to previous data: port_nr={port_number} port_sum_rx={port_sum_rx}"
-                    )
-            if port_sum_tx <= 0:
-                port_sum_tx = self._previous_data["tx"][port_number0]
-                current_data["tx"][port_number0] = port_sum_tx
-                if port_status_is_connected:
-                    _LOGGER.info(
-                        f"Fallback to previous data: port_nr={port_number} port_sum_rx={port_sum_tx}"
-                    )
-            if port_speed_bps_io <= 0:
-                port_speed_bps_io = self._previous_data["io"][port_number0]
-                current_data["io"][port_number0] = port_speed_bps_io
-                if port_status_is_connected:
-                    _LOGGER.info(
-                        f"Fallback to previous data: port_nr={port_number} port_speed_bps_io={port_speed_bps_io}"
-                    )
+            if port_status_is_connected:
+                if port_sum_rx <= 0:
+                    port_sum_rx = self._previous_data["rx"][port_number0]
+                    current_data["rx"][port_number0] = port_sum_rx
+                    if port_status_is_connected:
+                        _LOGGER.info(
+                            f"Fallback to previous data: port_nr={port_number} port_sum_rx={port_sum_rx}"
+                        )
+                if port_sum_tx <= 0:
+                    port_sum_tx = self._previous_data["tx"][port_number0]
+                    current_data["tx"][port_number0] = port_sum_tx
+                    if port_status_is_connected:
+                        _LOGGER.info(
+                            f"Fallback to previous data: port_nr={port_number} port_sum_rx={port_sum_tx}"
+                        )
+                if port_speed_bps_io <= 0:
+                    port_speed_bps_io = self._previous_data["io"][port_number0]
+                    current_data["io"][port_number0] = port_speed_bps_io
+                    if port_status_is_connected:
+                        _LOGGER.info(
+                            f"Fallback to previous data: port_nr={port_number} port_speed_bps_io={port_speed_bps_io}"
+                        )
 
             # Highpass-Filter (max 1e9 B/s = 1GB/s per port)
             hp_max_traffic = 1e9 * sample_time
@@ -719,6 +751,28 @@ class NetgearSwitchConnector:
         }
 
         return switch_data
+
+    def turn_on_poe_port(self, poe_port, turn_on=True):
+        if poe_port in self.poe_ports:
+            url = POE_PORT_CONFIG_CGI_URL.format(ip=self.host)
+            data = {
+                "hash": self._client_hash,
+                "ACTION": "Apply",
+                "portID": poe_port - 1,
+                "ADMIN_MODE": 1 if turn_on else 0,
+            }
+            # print("turn_on_poe_port data=", data)
+            resp = self._request("post", url, data=data)
+            successful = resp.status_code == 200
+            if successful:
+                self._loaded_switch_infos[f"port_{poe_port}_poe_power_active"] = (
+                    "on" if turn_on else "off"
+                )
+            return resp.status_code == 200
+        return False
+
+    def turn_off_poe_port(self, poe_port):
+        return self.turn_on_poe_port(poe_port=poe_port, turn_on=False)
 
 
 def scan_lan_for_netgear_switches(start_ip="192.168.178.1"):

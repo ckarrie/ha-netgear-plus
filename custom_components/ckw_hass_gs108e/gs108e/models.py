@@ -4,8 +4,10 @@
 class AutodetectedSwitchModel:
     MODEL_NAME = None
     PORTS = None
-    POE_PORTS = 0
-    POE_SUPPORT = False
+    POE_PORTS = None
+    POE_MAX_POWER_ALL_PORTS = None
+    POE_MAX_POWER_SINGLE_PORT = None
+    POE_SCHEDULING = False
     CHECKS_AND_RESULTS = []
 
     def __init__(self) -> None:
@@ -69,7 +71,8 @@ class GS3xxSeries(AutodetectedSwitchModel):
 class GS305EP(GS3xxSeries):
     MODEL_NAME = "GS305EP"
     PORTS = 5
-    POE_SUPPORT = True
+    POE_PORTS = [1, 2, 3, 4]
+    POE_MAX_POWER_ALL_PORTS = 63
     CHECKS_AND_RESULTS = [
         ("check_login_form_rand", [True]),
         ("check_login_title_tag", ["GS305EP"]),
@@ -80,6 +83,8 @@ class GS305EP(GS3xxSeries):
 class GS308EP(GS3xxSeries):
     MODEL_NAME = "GS308EP"
     PORTS = 8
+    POE_PORTS = [1, 2, 3, 4, 5, 6, 7, 8]
+    POE_MAX_POWER_ALL_PORTS = 62
     CHECKS_AND_RESULTS = [
         ("check_login_form_rand", [True]),
         ("check_login_title_tag", ["GS308EP"]),
@@ -89,7 +94,24 @@ class GS308EP(GS3xxSeries):
 class GS316EP(GS3xxSeries):
     MODEL_NAME = "GS316EP"
     PORTS = 16
+    POE_PORTS = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]
+    POE_MAX_POWER_ALL_PORTS = 180
+    POE_MAX_POWER_SINGLE_PORT = 30
+    POE_SCHEDULING = True
     CHECKS_AND_RESULTS = [
         ("check_login_form_rand", [True]),
         ("check_login_title_tag", ["GS316EP"]),
+    ]
+
+
+class GS316EPP:
+    """Dont include now. Add Subclass GS316EP to include."""
+
+    MODEL_NAME = "GS316EPP"
+    POE_POWER_ALL_PORTS = 231
+    POE_MAX_POWER_SINGLE_PORT = 30
+    POE_SCHEDULING = True
+    CHECKS_AND_RESULTS = [
+        ("check_login_form_rand", [True]),
+        ("check_login_title_tag", ["GS316EPP"]),
     ]

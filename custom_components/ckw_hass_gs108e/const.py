@@ -8,7 +8,7 @@ from .gs108e import models
 
 DOMAIN = "ckw_hass_gs108e"
 
-PLATFORMS = [Platform.BINARY_SENSOR, Platform.SENSOR]
+PLATFORMS = [Platform.BINARY_SENSOR, Platform.SENSOR, Platform.SWITCH]
 
 DEFAULT_NAME = "Netgear GS108E Switch"
 SCAN_INTERVAL = 10
@@ -24,3 +24,5 @@ SUPPORTED_MODELS = [
     models.GS108E,
     models.GS108Ev3,
 ]
+ON_VALUES = ["on", True]
+OFF_VALUES = ["off", False]
