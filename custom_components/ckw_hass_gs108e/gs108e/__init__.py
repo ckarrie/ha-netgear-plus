@@ -40,6 +40,8 @@ MODELS = [
     models.GS108Ev3,
     models.GS305EP,
     models.GS308EP,
+    models.GS316EP,
+    models.GS316EPP,
 ]
 
 _LOGGER = logging.getLogger(__name__)

@@ -104,13 +104,9 @@ class GS316EP(GS3xxSeries):
     ]
 
 
-class GS316EPP:
-    """Dont include now. Add Subclass GS316EP to include."""
-
+class GS316EPP(GS316EP):
     MODEL_NAME = "GS316EPP"
     POE_POWER_ALL_PORTS = 231
-    POE_MAX_POWER_SINGLE_PORT = 30
-    POE_SCHEDULING = True
     CHECKS_AND_RESULTS = [
         ("check_login_form_rand", [True]),
         ("check_login_title_tag", ["GS316EPP"]),
