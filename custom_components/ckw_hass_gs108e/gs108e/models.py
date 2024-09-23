@@ -89,6 +89,7 @@ class GS308EP(GS3xxSeries):
         ("check_login_form_rand", [True]),
         ("check_login_title_tag", ["GS308EP"]),
     ]
+    DASHBOARD_CGI_URL_TMPL = "http://{ip}/dashboard.cgi"
 
 
 class GS316EP(GS3xxSeries):
