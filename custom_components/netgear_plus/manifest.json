@@ -1,0 +1,10 @@
+{
+  "domain": "netgear_plus",
+  "name": "Netgear Plus",
+  "documentation": "https://github.com/foxey/netgear_plus/blob/main/README.md",
+  "config_flow": true,
+  "iot_class": "local_polling",
+  "codeowners": [],
+  "requirements": ["lxml>=4.6.1"],
+  "version": "0.6.1.5"
+}
