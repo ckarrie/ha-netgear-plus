@@ -65,7 +65,7 @@ Supported firmware languages: GR (German), EN (English)
 
 [![Open your Home Assistant instance and open a repository inside the Home Assistant Community Store.](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=ckarrie&repository=ckw-ha-gs108e&category=integration)
 
-1. Goto [HACS > Integrations](https://my.home-assistant.io/redirect/hacs/integrations)
+1. In your Home Assistant instance, goto **HACS** (Search: ">hacs")
 2. Click on the right corner on the vertical dots and select "Custom Repositories"
 3. Add "https://github.com/ckarrie/ckw-ha-gs108e" as Integration
 
