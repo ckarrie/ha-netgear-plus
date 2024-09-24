@@ -1,4 +1,4 @@
-# HomeAssistant NETGEAR Plus Switches Integration
+# Home Assistant NETGEAR Plus Switches Integration
 
 ## What it does
 Grabs statistical network data from [supported NETGEAR Switches](#supported-and-tested-netgear-modelsproducts-and-firmwares) from the
@@ -61,7 +61,7 @@ some basic configuration updates.
 
 Supported firmware languages: GR (German), EN (English)
 
-## How to integrate in your HomeAssistant
+## How to integrate in Home Assistant
 
 [![Open your Home Assistant instance and open a repository inside the Home Assistant Community Store.](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=ckarrie&repository=ckw-ha-gs108e&category=integration)
 
