@@ -1,8 +1,10 @@
-# ckw-ha-gs108e
-HomeAssistant Netgear Switch Integration
+# HomeAssistant Netgear Plus Switches Integration
 
 ## What it does
-Grabs statistical network data from [supported Netgear Switches](#supported-and-tested-netgear-modelsproducts-and-firmwares)
+Grabs statistical network data from [supported Netgear Switches](#supported-and-tested-netgear-modelsproducts-and-firmwares) from the
+[Plus Managed Network Switch](https://www.netgear.com/business/wired/switches/plus/) line. These switches can only be managed using a
+Web interface and not through SNMP or cli. This integration uses web scraping to collect the switch configuration, statistics and
+some basic configuration updates.
 
 ## How it works
 1. Detecting Switch Model/Product in login.cgi
@@ -46,15 +48,16 @@ Grabs statistical network data from [supported Netgear Switches](#supported-and-
 | Switch Traffic Received          | SENSOR        | `sum_port_traffic_rx`                   | MB (in response time)                |
 | Switch Traffic Transferred       | SENSOR        | `sum_port_traffic_tx`                   | MB (in response time)                |
 
-## Supported and tested Netgear Models/Products and firmwares
+## Supported and tested Netgear Models/Products and firmware versions
 
-| Model    | Ports    | Firmwares                                    | Bootloader          |
+| Model    | Ports    | Firmware versions                            | Bootloader versions |
 |----------|----------|----------------------------------------------|---------------------|
 | GS105E   | 5        | ?                                            |                     |
 | GS108E   | 8        | V1.00.11                                     | V1.00.03            |
 | GS105Ev3 | 5        | ?                                            |                     |
 | GS108Ev3 | 8        | V2.00.05, V2.06.10, V2.06.17, V2.06.24       | V2.06.01 - V2.06.03 |
 | GS305EP  | 5        | V1.0.1.1                                     |                     |
+| GS308EP  | 8        | V1.0.0.10, V1.0.1.4                          |                     |
 
 Supported firmware languages: GR (German), EN (English)
 
@@ -66,7 +69,7 @@ Supported firmware languages: GR (German), EN (English)
 2. Click on the right corner on the vertical dots and select "Custom Repositories"
 3. Add "https://github.com/ckarrie/ckw-ha-gs108e" as Integration
 
-After adding the integration go to [Add Integration](https://my.home-assistant.io/redirect/integrations/) and select **Netgear GS108e Integration**.
+After adding the integration go to [Add Integration](https://my.home-assistant.io/redirect/integrations/) and select **Netgear Plus**.
 
 ### Lovelance examples
 
@@ -113,13 +116,6 @@ line_width: 1
 animate: true
 ```
 
-
-## ToDo
-- move integrated gs108e module into a seperate Python library (get rid of gs108e wording)
-- add GS308x support
-  - PoE ports status
-  - turn on/off PoE ports
-
 ## API Level
 
 ### create a python venv with `requests` and `lxml`
@@ -143,8 +139,8 @@ python3
 ```python
 ip = '192.168.178.68'
 p = 'fyce4gKZemkqjDY'
-import gs108e
-sw = gs108e.NetgearSwitchConnector(ip, p)
+import netgear_plus
+sw = netgear_plus.NetgearSwitchConnector(ip, p)
 sw.autodetect_model()
 sw.get_login_cookie()
 
@@ -153,6 +149,3 @@ print(sw.switch_model.MODEL_NAME)
 print(data["port_1_sum_rx_mbytes"])
 print(data)
 ```
-
-
-
