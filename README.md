@@ -1,7 +1,7 @@
-# HomeAssistant Netgear Plus Switches Integration
+# HomeAssistant NETGEAR Plus Switches Integration
 
 ## What it does
-Grabs statistical network data from [supported Netgear Switches](#supported-and-tested-netgear-modelsproducts-and-firmwares) from the
+Grabs statistical network data from [supported NETGEAR Switches](#supported-and-tested-netgear-modelsproducts-and-firmwares) from the
 [Plus Managed Network Switch](https://www.netgear.com/business/wired/switches/plus/) line. These switches can only be managed using a
 Web interface and not through SNMP or cli. This integration uses web scraping to collect the switch configuration, statistics and
 some basic configuration updates.
@@ -48,7 +48,7 @@ some basic configuration updates.
 | Switch Traffic Received          | SENSOR        | `sum_port_traffic_rx`                   | MB (in response time)                |
 | Switch Traffic Transferred       | SENSOR        | `sum_port_traffic_tx`                   | MB (in response time)                |
 
-## Supported and tested Netgear Models/Products and firmware versions
+## Supported and tested NETGEAR Models/Products and firmware versions
 
 | Model    | Ports    | Firmware versions                            | Bootloader versions |
 |----------|----------|----------------------------------------------|---------------------|
@@ -69,7 +69,7 @@ Supported firmware languages: GR (German), EN (English)
 2. Click on the right corner on the vertical dots and select "Custom Repositories"
 3. Add "https://github.com/ckarrie/ckw-ha-gs108e" as Integration
 
-After adding the integration go to [Add Integration](https://my.home-assistant.io/redirect/integrations/) and select **Netgear Plus**.
+After adding the integration go to [Add Integration](https://my.home-assistant.io/redirect/integrations/) and select **NETGEAR Plus**.
 
 ### Lovelance examples
 
