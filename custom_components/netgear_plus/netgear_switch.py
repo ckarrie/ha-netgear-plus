@@ -18,7 +18,7 @@ from homeassistant.helpers.update_coordinator import (
 
 from .const import DOMAIN, SUPPORTED_MODELS
 from .errors import CannotLoginException
-from .gs108e import NetgearSwitchConnector
+from .netgear_plus import NetgearSwitchConnector
 
 _LOGGER = logging.getLogger(__name__)
 

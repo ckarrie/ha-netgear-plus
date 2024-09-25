@@ -4,9 +4,9 @@ from datetime import timedelta
 
 from homeassistant.const import Platform
 
-from .gs108e import models
+from .netgear_plus import models
 
-DOMAIN = "ckw_hass_gs108e"
+DOMAIN = "netgear_plus"
 
 PLATFORMS = [Platform.BINARY_SENSOR, Platform.SENSOR, Platform.SWITCH]
 

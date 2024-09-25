@@ -3,7 +3,7 @@ import logging
 from homeassistant.components.switch import SwitchDeviceClass
 
 from . import const
-from .gs108e.models import GS3xxSeries
+from .netgear_plus.models import GS3xxSeries
 from .netgear_entities import (
     HomeAssistantNetgearSwitch,
     NetgearBinarySensorEntityDescription,
