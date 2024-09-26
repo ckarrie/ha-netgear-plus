@@ -17,7 +17,7 @@ from homeassistant.util.network import is_ipv4_address
 
 from .const import DEFAULT_CONF_TIMEOUT, DEFAULT_HOST, DEFAULT_NAME, DOMAIN
 from .errors import CannotLoginException
-from .netgear_switch import get_api, get_api_unauthenticated
+from .netgear_switch import get_api
 
 _LOGGER = logging.getLogger(__name__)
 
