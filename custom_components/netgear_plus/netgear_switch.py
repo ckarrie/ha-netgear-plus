@@ -23,14 +23,15 @@ from .netgear_plus import NetgearSwitchConnector
 _LOGGER = logging.getLogger(__name__)
 
 
-def get_api(host: str, password: str) -> NetgearSwitchConnector:
+def get_api(host: str, password: str = "") -> NetgearSwitchConnector:
     """Get the Netgear API and login to it."""
     api: NetgearSwitchConnector = NetgearSwitchConnector(host, password)
     api.autodetect_model()
-
-    if not api.get_login_cookie():
-        raise CannotLoginException
-
+    # Only login if password is not empty.
+    # This allows to call get_unique_id before the user has provided a password
+    if password:
+        if not api.get_login_cookie():
+            raise CannotLoginException
     return api
 
 
