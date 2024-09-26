@@ -112,3 +112,16 @@ class GS316EPP(GS316EP):
         ("check_login_form_rand", [True]),
         ("check_login_title_tag", ["GS316EPP"]),
     ]
+
+
+
+MODELS = [
+    GS105E,
+    GS105Ev2,
+    GS108E,
+    GS108Ev3,
+    GS305EP,
+    GS308EP,
+    GS316EP,
+    GS316EPP,
+]

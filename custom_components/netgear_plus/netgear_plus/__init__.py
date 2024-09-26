@@ -33,17 +33,6 @@ PORT_MODUS_SPEED = ["Auto"]
 PORT_POE_POWER_IS_ON_VALUES = []
 
 
-MODELS = [
-    models.GS105E,
-    models.GS105Ev2,
-    models.GS108E,
-    models.GS108Ev3,
-    models.GS305EP,
-    models.GS308EP,
-    models.GS316EP,
-    models.GS316EPP,
-]
-
 _LOGGER = logging.getLogger(__name__)
 
 
@@ -101,7 +90,7 @@ class NetgearSwitchConnector:
             self.check_login_url()
         # Fallback to self._login_page.LOGIN_URL = "http://{ip}/login.htm" if cgi does not exists
         matched_models = []
-        for mdl_cls in MODELS:
+        for mdl_cls in models.MODELS:
             mdl = mdl_cls()
             mdl_name = mdl.MODEL_NAME
             passed_checks_by_model[mdl_name] = {}

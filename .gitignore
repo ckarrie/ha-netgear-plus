@@ -2,3 +2,4 @@ havenv/
 .idea/
 *.pyc
 __pycache__/
+custom_components/netgear_plus/secrets.py

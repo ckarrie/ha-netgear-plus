@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import logging
-from typing import cast
+from typing import Any, cast
 from urllib.parse import urlparse
 
 import requests
@@ -20,6 +20,10 @@ from .errors import CannotLoginException
 from .netgear_switch import get_api
 
 _LOGGER = logging.getLogger(__name__)
+
+
+def _discovery_schema_with_defaults(discovery_info):
+    return vol.Schema(_ordered_shared_schema(discovery_info))
 
 
 def _user_schema_with_defaults(user_input):
@@ -81,12 +85,19 @@ class NetgearFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
         """Get the options flow."""
         return OptionsFlowHandler(config_entry)
 
-    async def _show_setup_form(self, user_input=None, errors=None):
+    async def _show_setup_form(
+        self,
+        user_input: dict[str, Any] | None = None,
+        errors: dict[str, str] | None = None,
+    ) -> ConfigFlowResult:
         """Show the setup form to the user."""
         if not user_input:
             user_input = {}
 
-        data_schema = _user_schema_with_defaults(user_input)
+        if self.discovered:
+            data_schema = _discovery_schema_with_defaults(user_input)
+        else:
+            data_schema = _user_schema_with_defaults(user_input)
 
         return self.async_show_form(
             step_id="user",
@@ -94,6 +105,39 @@ class NetgearFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
             errors=errors or {},
             description_placeholders=self.placeholders,
         )
+
+    async def async_step_ssdp(
+        self, discovery_info: ssdp.SsdpServiceInfo
+    ) -> ConfigFlowResult:
+        """Initialize flow from ssdp."""
+        updated_data: dict[str, str | int | bool] = {}
+
+        device_url = urlparse(discovery_info.ssdp_location)
+        if hostname := device_url.hostname:
+            hostname = cast(str, hostname)
+            updated_data[CONF_HOST] = hostname
+
+        if not is_ipv4_address(str(hostname)):
+            return self.async_abort(reason="not_ipv4_address")
+
+        _LOGGER.debug("Netgear ssdp discovery info: %s", discovery_info)
+
+        # Open connection to get unique id
+        try:
+            api = await self.hass.async_add_executor_job(get_api, updated_data[CONF_HOST])
+        except requests.exceptions.ConnectTimeout:
+            errors["base"] = "timeout"
+        except NotImplementedError:
+            errors["base"] = "not_implemented_error"
+
+        unique_id = await self.hass.async_add_executor_job(api.get_unique_id)
+        await self.async_set_unique_id(unique_id)
+        self._abort_if_unique_id_configured(updates=updated_data)
+
+        self.placeholders.update(updated_data)
+        self.discovered = True
+
+        return await self.async_step_user()
 
     async def async_step_user(self, user_input=None):
         """Handle a flow initiated by the user."""
