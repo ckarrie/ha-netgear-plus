@@ -8,15 +8,6 @@ import requests
 
 from . import models, netgear_crypt
 
-LOGIN_HTM_URL_TMPL = "http://{ip}/login.htm"
-LOGIN_CGI_URL_TMPL = "http://{ip}/login.cgi"
-SWITCH_INFO_HTM_URL_TMPL = "http://{ip}/switch_info.htm"
-SWITCH_INFO_CGI_URL_TMPL = "http://{ip}/switch_info.cgi"
-PORT_STATISTICS_URL_TMPL = "http://{ip}/portStatistics.cgi"
-PORT_STATUS_URL_TMPL = "http://{ip}/status.htm"
-POE_PORT_CONFIG_CGI_URL = "http://{ip}/PoEPortConfig.cgi"
-ALLOWED_COOKIE_TYPES = ["GS108SID", "SID"]
-
 API_V2_CHECKS = {
     "bootloader": ["V1.00.03", "V2.06.01", "V2.06.02", "V2.06.03"],
     "firmware": ["V2.06.24GR", "V2.06.24EN"],
@@ -30,7 +21,6 @@ def _reduce_digits(v):
 
 PORT_STATUS_CONNECTED = ["Aktiv", "Up", "UP"]
 PORT_MODUS_SPEED = ["Auto"]
-PORT_POE_POWER_IS_ON_VALUES = []
 
 
 _LOGGER = logging.getLogger(__name__)
@@ -40,7 +30,7 @@ class MultipleModelsDetected(Exception):
     pass
 
 
-class MissingSwitchModel(Exception):
+class SwitchModelNotDetected(Exception):
     pass
 
 
@@ -88,7 +78,6 @@ class NetgearSwitchConnector:
         passed_checks_by_model = {}
         if self._login_page_response is None:
             self.check_login_url()
-        # Fallback to self._login_page.LOGIN_URL = "http://{ip}/login.htm" if cgi does not exists
         matched_models = []
         for mdl_cls in models.MODELS:
             mdl = mdl_cls()
@@ -113,22 +102,17 @@ class NetgearSwitchConnector:
             f"[NetgearSwitchConnector.autodetect_model] passed_checks_by_model={passed_checks_by_model} matched_models={matched_models}"  # noqa: G004
         )
 
-        # print(
-        #    "[NetgearSwitchConnector.autodetect_model] passed_checks_by_model=",
-        #    passed_checks_by_model,
-        #    "matched_models=",
-        #    matched_models,
-        # )
-
         if len(matched_models) == 1:
             # set local settings
-            self._set_instance_attribes_by_model(switch_model=matched_models[0])
+            self._set_instance_attributes_by_model(switch_model=matched_models[0])
             return self.switch_model
         if len(matched_models) > 1:
             raise MultipleModelsDetected(str(matched_models))
-        return False
+        else:
+            raise SwitchModelNotDetected
 
-    def _set_instance_attribes_by_model(
+
+    def _set_instance_attributes_by_model(
         self, switch_model: models.AutodetectedSwitchModel
     ):
         if switch_model:
@@ -193,10 +177,8 @@ class NetgearSwitchConnector:
                 "[NetgearSwitchConnector.get_unique_id] now switch_model is %s",
                 str(self.switch_model),
             )
-        if self.switch_model:
-            model_lower = self.switch_model.MODEL_NAME.lower()
-            return model_lower + "_" + self.host.replace(".", "_")
-        raise MissingSwitchModel
+        model_lower = self.switch_model.MODEL_NAME.lower()
+        return model_lower + "_" + self.host.replace(".", "_")
 
     def get_login_password(self):
         if self._login_page_form_password is None:
@@ -206,8 +188,10 @@ class NetgearSwitchConnector:
         return self._login_page_form_password
 
     def get_login_cookie(self):
+        if not self.switch_model:
+            self.autodetect_model()
         login_password = self.get_login_password()
-        url = LOGIN_CGI_URL_TMPL.format(ip=self.host)
+        url = self.LOGIN_URL.format(ip=self.host)
         _LOGGER.info(
             "[NetgearSwitchConnector.get_login_cookie] calling request.post for url=%s with login_password=%s",
             url,
@@ -219,7 +203,7 @@ class NetgearSwitchConnector:
             allow_redirects=True,
             timeout=self.LOGIN_URL_REQUEST_TIMEOUT,
         )
-        for ct in ALLOWED_COOKIE_TYPES:
+        for ct in self.switch_model.ALLOWED_COOKIE_TYPES:
             cookie = response.cookies.get(ct, None)
             if cookie:
                 self.cookie_name = ct
@@ -265,40 +249,48 @@ class NetgearSwitchConnector:
         except requests.exceptions.Timeout:
             return None
 
-    def fetch_switch_infos(self, url_tmpl=SWITCH_INFO_HTM_URL_TMPL):
-        if isinstance(self.switch_model, (models.GS3xxSeries)):
-            url_tmpl = self.switch_model.DASHBOARD_CGI_URL_TMPL
-        url = url_tmpl.format(ip=self.host)
-        method = "get"
-        resp = self._request(url=url, method=method)
-        if isinstance(resp, requests.Response) and resp.status_code == 404:
-            return self.fetch_switch_infos(url_tmpl=SWITCH_INFO_CGI_URL_TMPL)
-        return resp
+    def fetch_switch_infos(self):
+        response = None
+        for template in self.switch_model.SWITCH_INFO_URL_TEMPLATES:
+            url = template["url"].format(ip=self.host)
+            method = template["method"]
+            response = self._request(method, url)
+            if response.status_code == 200:
+                break
+        return response
 
     def fetch_port_statistics(self, client_hash=None):
-        url = PORT_STATISTICS_URL_TMPL.format(ip=self.host)
         data = None
-        if isinstance(self.switch_model, models.GS3xxSeries):
-            method = "get"
-        else:
-            method = "post"
-            if client_hash is not None:
+        response = None
+        for template in self.switch_model.PORT_STATISTICS_TEMPLATES:
+            url = template["url"].format(ip=self.host)
+            method = template["method"]
+            if method == "post" and client_hash is not None:
                 data = {"hash": client_hash}
-        return self._request(url=url, method=method, data=data, allow_redirects=False)
+            response = self._request(method, url, data)
+            if response.status_code == 200:
+                break
+        return response
 
     def fetch_port_status(self, client_hash=None):
-        url = PORT_STATUS_URL_TMPL.format(ip=self.host)
-        method = "get"
-        return self._request(url=url, method=method)
+        response = None
+        for template in self.switch_model.PORT_STATUS_TEMPLATES:
+            url = template["url"].format(ip=self.host)
+            method = template["method"]
+            response = self._request(method, url)
+            if response.status_code == 200:
+                break
+        return response
 
     def fetch_poeportconfig(self):
-        if isinstance(self.switch_model, models.GS3xxSeries):
-            url = POE_PORT_CONFIG_CGI_URL.format(ip=self.host)
-            method = "get"
-            data = None
-            return self._request(
-                url=url, method=method, data=data, allow_redirects=False
-            )
+        response = None
+        for template in self.switch_model.POE_PORT_CONFIG_TEMPLATES:
+            url = template["url"].format(ip=self.host)
+            method = template["method"]
+            response = self._request(method, url)
+            if response.status_code == 200:
+                break
+        return response
 
     def _parse_port_statistics(self, tree):
         # convert to int
@@ -473,6 +465,9 @@ class NetgearSwitchConnector:
         return None
 
     def get_switch_infos(self):
+        if not self.cookie_name or not self.cookie_content:
+            self.get_login_cookie()
+
         switch_data = {}
 
         if not self._loaded_switch_infos:
@@ -510,12 +505,6 @@ class NetgearSwitchConnector:
                     self._switch_bootloader = switch_bootloader_x[0].text
                 if switch_serial_number_x:
                     switch_serial_number = switch_serial_number_x[0].text
-
-                # print("switch_name", switch_name)
-                # print("switch_bootloader", switch_bootloader)
-                # print("client_hash", client_hash)
-                # print("switch_firmware", switch_firmware)
-                # print("switch_serial_number", switch_serial_number)
 
             client_hash_x = tree.xpath('//input[@id="hash"]')
             if client_hash_x:
@@ -745,26 +734,21 @@ class NetgearSwitchConnector:
 
     def turn_on_poe_port(self, poe_port, turn_on=True):
         if poe_port in self.poe_ports:
-            url = POE_PORT_CONFIG_CGI_URL.format(ip=self.host)
-            data = {
-                "hash": self._client_hash,
-                "ACTION": "Apply",
-                "portID": poe_port - 1,
-                "ADMIN_MODE": 1 if turn_on else 0,
-            }
-            # print("turn_on_poe_port data=", data)
-            resp = self._request("post", url, data=data)
-            successful = resp.status_code == 200
-            if successful:
-                self._loaded_switch_infos[f"port_{poe_port}_poe_power_active"] = (
-                    "on" if turn_on else "off"
-                )
-            return resp.status_code == 200
+            for template in self.switch_model.POE_PORT_CONFIG_TEMPLATES:
+                url = template["url"].format(ip=self.host)
+                data = {
+                    "hash": self._client_hash,
+                    "ACTION": "Apply",
+                    "portID": poe_port - 1,
+                    "ADMIN_MODE": 1 if turn_on else 0,
+                }
+                resp = self._request("post", url, data=data)
+                if resp.status_code == 200:
+                    self._loaded_switch_infos[f"port_{poe_port}_poe_power_active"] = (
+                        "on" if turn_on else "off"
+                    )
+                    return True
         return False
 
     def turn_off_poe_port(self, poe_port):
         return self.turn_on_poe_port(poe_port=poe_port, turn_on=False)
-
-
-def scan_lan_for_netgear_switches(start_ip="192.168.178.1"):
-    found_switches = {}

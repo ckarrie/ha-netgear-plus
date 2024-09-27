@@ -2,13 +2,33 @@
 
 
 class AutodetectedSwitchModel:
+    ALLOWED_COOKIE_TYPES = ["SID"]
     MODEL_NAME = None
     PORTS = None
-    POE_PORTS = None
+    POE_PORTS = []
     POE_MAX_POWER_ALL_PORTS = None
     POE_MAX_POWER_SINGLE_PORT = None
     POE_SCHEDULING = False
     CHECKS_AND_RESULTS = []
+
+    SWITCH_INFO_URL_TEMPLATES = [
+        { "method": "get",
+          "url": "http://{ip}/switch_info.htm" },
+        { "method": "get",
+          "url": "http://{ip}/switch_info.cgi" }
+    ]
+    PORT_STATISTICS_TEMPLATES = [
+        { "method": "post",
+          "url": "http://{ip}/portStatistics.cgi" }
+    ]
+    PORT_STATUS_TEMPLATES = [
+        { "method": "post",
+          "url": "http://{ip}/status.htm" }
+    ]
+    POE_PORT_CONFIG_TEMPLATES = [
+    ]
+
+
 
     def __init__(self) -> None:
         pass
@@ -46,6 +66,7 @@ class GS108E(AutodetectedSwitchModel):
             ["GS308E - 8-Port Gigabit Ethernet Smart Managed Plus Switch"],
         ),
     ]
+    ALLOWED_COOKIE_TYPES = ["GS108SID", "SID"]
 
 
 class GS108Ev3(AutodetectedSwitchModel):
@@ -62,10 +83,26 @@ class GS108Ev3(AutodetectedSwitchModel):
             ],
         ),
     ]
+    ALLOWED_COOKIE_TYPES = ["GS108SID", "SID"]
 
 
 class GS3xxSeries(AutodetectedSwitchModel):
-    pass
+    SWITCH_INFO_URL_TEMPLATES = [
+        { "method": "get",
+          "url": "http://{ip}/dashboard.cgi" }
+    ]
+    PORT_STATISTICS_TEMPLATES = [
+        { "method": "get",
+          "url": "http://{ip}/portStatistics.cgi" }
+    ]
+    POE_PORT_CONFIG_TEMPLATES = [
+        { "method": "get",
+          "url": "http://{ip}/PoEPortConfig.cgi" }
+    ]
+    POE_PORT_STATUS_TEMPLATES = [
+        { "method": "get",
+          "url": "http://{ip}/PoEPortStatus.cgi" }
+    ]
 
 
 class GS305EP(GS3xxSeries):
@@ -77,7 +114,6 @@ class GS305EP(GS3xxSeries):
         ("check_login_form_rand", [True]),
         ("check_login_title_tag", ["GS305EP"]),
     ]
-    DASHBOARD_CGI_URL_TMPL = "http://{ip}/dashboard.cgi"
 
 
 class GS308EP(GS3xxSeries):
@@ -89,7 +125,6 @@ class GS308EP(GS3xxSeries):
         ("check_login_form_rand", [True]),
         ("check_login_title_tag", ["GS308EP"]),
     ]
-    DASHBOARD_CGI_URL_TMPL = "http://{ip}/dashboard.cgi"
 
 
 class GS316EP(GS3xxSeries):
