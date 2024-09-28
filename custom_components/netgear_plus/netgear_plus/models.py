@@ -11,7 +11,7 @@ class AutodetectedSwitchModel:
     POE_SCHEDULING = False
     CHECKS_AND_RESULTS = []
 
-    SWITCH_INFO_URL_TEMPLATES = [
+    SWITCH_INFO_TEMPLATES = [
         { "method": "get",
           "url": "http://{ip}/switch_info.htm" },
         { "method": "get",
@@ -26,6 +26,11 @@ class AutodetectedSwitchModel:
           "url": "http://{ip}/status.htm" }
     ]
     POE_PORT_CONFIG_TEMPLATES = [
+
+    ]
+    LOGOUT_TEMPLATES = [
+        { "method": "post",
+          "url": "http://{ip}/logout.cgi" }
     ]
 
 
@@ -87,7 +92,7 @@ class GS108Ev3(AutodetectedSwitchModel):
 
 
 class GS3xxSeries(AutodetectedSwitchModel):
-    SWITCH_INFO_URL_TEMPLATES = [
+    SWITCH_INFO_TEMPLATES = [
         { "method": "get",
           "url": "http://{ip}/dashboard.cgi" }
     ]
@@ -101,7 +106,7 @@ class GS3xxSeries(AutodetectedSwitchModel):
     ]
     POE_PORT_STATUS_TEMPLATES = [
         { "method": "get",
-          "url": "http://{ip}/PoEPortStatus.cgi" }
+          "url": "http://{ip}/getPoePortStatus.cgi" }
     ]
 
 

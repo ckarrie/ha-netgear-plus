@@ -227,9 +227,24 @@ class NetgearSwitchConnector:
             )
         return False
 
+    def delete_login_cookie(self):
+        try:
+            response_logout = self.fetch_page(self.switch_model.LOGOUT_TEMPLATES)
+        except requests.exceptions.ConnectionError:
+            self.cookie_name = None
+            self.cookie_content = None
+            return True
+        if response_logout and \
+                html.fromstring(response_logout).xpath("//title")[0].text.lower() == 'redirect to login':
+            self.cookie_name = None
+            self.cookie_content = None
+            return True
+        return False
+
     def _request(self, method, url, data=None, timeout=None, allow_redirects=False):
         if not self.cookie_name or not self.cookie_content:
-            return None
+            if not self.get_login_cookie():
+                return None
         if timeout is None:
             timeout = self.LOGIN_URL_REQUEST_TIMEOUT
         jar = requests.cookies.RequestsCookieJar()
@@ -249,46 +264,16 @@ class NetgearSwitchConnector:
         except requests.exceptions.Timeout:
             return None
 
-    def fetch_switch_infos(self):
-        response = None
-        for template in self.switch_model.SWITCH_INFO_URL_TEMPLATES:
-            url = template["url"].format(ip=self.host)
-            method = template["method"]
-            response = self._request(method, url)
-            if response.status_code == 200:
-                break
-        return response
-
-    def fetch_port_statistics(self, client_hash=None):
+    def fetch_page(self, templates, client_hash=None):
         data = None
         response = None
-        for template in self.switch_model.PORT_STATISTICS_TEMPLATES:
+        for template in templates:
             url = template["url"].format(ip=self.host)
             method = template["method"]
             if method == "post" and client_hash is not None:
                 data = {"hash": client_hash}
             response = self._request(method, url, data)
-            if response.status_code == 200:
-                break
-        return response
-
-    def fetch_port_status(self, client_hash=None):
-        response = None
-        for template in self.switch_model.PORT_STATUS_TEMPLATES:
-            url = template["url"].format(ip=self.host)
-            method = template["method"]
-            response = self._request(method, url)
-            if response.status_code == 200:
-                break
-        return response
-
-    def fetch_poeportconfig(self):
-        response = None
-        for template in self.switch_model.POE_PORT_CONFIG_TEMPLATES:
-            url = template["url"].format(ip=self.host)
-            method = template["method"]
-            response = self._request(method, url)
-            if response.status_code == 200:
+            if response and response.status_code == 200:
                 break
         return response
 
@@ -448,12 +433,23 @@ class NetgearSwitchConnector:
         # print("Port Status", self.port_status)
         return status_by_port
 
-    def _parse_poe_port_status(self, tree):
-        status_by_port = {}
+    def _parse_poe_port_config(self, tree):
+        config_by_port = {}
         poe_port_power_x = tree.xpath('//input[@id="hidPortPwr"]')
         for i, x in enumerate(poe_port_power_x):
-            status_by_port[i + 1] = "on" if x.value == "1" else "off"
-        return status_by_port
+            config_by_port[i + 1] = "on" if x.value == "1" else "off"
+        return config_by_port
+
+    def _parse_poe_port_status(self, tree):
+        current_power = {}
+        # Port name: //li[contains(@class,"poe_port_list_item")]//span[contains(@class,"poe_index_li_title")]
+        # Power mode: //li[contains(@class,"poe_port_list_item")]//span[contains(@class,"poe-power-mode")]
+        # Port status: //li[contains(@class,"poe_port_list_item")]//div[contains(@class,"poe_port_status")]
+        poe_port_power_x = tree.xpath('//li[contains(@class,"poe_port_list_item")]//div[contains(@class,"poe_port_status")]')
+        for i, x in enumerate(poe_port_power_x):
+            current_power[i + 1] = x.xpath(".//span")[5].text
+        return current_power
+
 
     def _get_gs3xx_switch_info(self, tree, text):
         span_node = tree.xpath(f'//span[text()="{text}"]')
@@ -471,7 +467,7 @@ class NetgearSwitchConnector:
         switch_data = {}
 
         if not self._loaded_switch_infos:
-            page = self.fetch_switch_infos()
+            page = self.fetch_page(self.switch_model.SWITCH_INFO_TEMPLATES)
             if not page:
                 return None
             tree = html.fromstring(page.content)
@@ -524,7 +520,8 @@ class NetgearSwitchConnector:
         # Hold fire
         time.sleep(self.sleep_time)
 
-        response_portstatistics = self.fetch_port_statistics(
+        response_portstatistics = self.fetch_page(
+            self.switch_model.PORT_STATISTICS_TEMPLATES,
             client_hash=self._client_hash
         )
         if not response_portstatistics:
@@ -548,23 +545,36 @@ class NetgearSwitchConnector:
         # Fetch Port Status
         time.sleep(self.sleep_time)
         if isinstance(self.switch_model, (models.GS3xxSeries)):
-            response_dashboard = self.fetch_switch_infos()
+            response_dashboard = self.fetch_page(self.switch_model.SWITCH_INFO_TEMPLATES)
             tree_response_dashboard = html.fromstring(response_dashboard.content)
             port_status = self._parse_port_status(tree=tree_response_dashboard)
         else:
-            response_portstatus = self.fetch_port_status(client_hash=self._client_hash)
+            response_portstatus = self.fetch_page(
+                self.switch_model.PORT_STATUS_TEMPLATES,
+                client_hash=self._client_hash)
             tree_portstatus = html.fromstring(response_portstatus.content)
             port_status = self._parse_port_status(tree=tree_portstatus)
 
         # Fetch POE Port Status
         if isinstance(self.switch_model, (models.GS3xxSeries)):
             time.sleep(self.sleep_time)
-            response_poeportconfig = self.fetch_poeportconfig()
+            response_poeportconfig = self.fetch_page(
+                self.switch_model.POE_PORT_CONFIG_TEMPLATES
+            )
             tree_poeportconfig = html.fromstring(response_poeportconfig.content)
-            poe_port_status = self._parse_poe_port_status(tree=tree_poeportconfig)
+            poe_port_config = self._parse_poe_port_config(tree=tree_poeportconfig)
+
+            for poe_port_nr, poe_power_config in poe_port_config.items():
+                switch_data[f"port_{poe_port_nr}_poe_power_active"] = poe_power_config
+            time.sleep(self.sleep_time)
+            response_poeportstatus = self.fetch_page(
+                self.switch_model.POE_PORT_STATUS_TEMPLATES
+            )
+            tree_poeportstatus = html.fromstring(response_poeportstatus.content)
+            poe_port_status = self._parse_poe_port_status(tree=tree_poeportstatus)
 
             for poe_port_nr, poe_power_status in poe_port_status.items():
-                switch_data[f"port_{poe_port_nr}_poe_power_active"] = poe_power_status
+                switch_data[f"port_{poe_port_nr}_poe_current_power"] = poe_power_status
 
         sample_time = _start_time - self._previous_timestamp
         sample_factor = 1 / sample_time
