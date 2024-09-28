@@ -3,7 +3,6 @@ import logging
 from homeassistant.components.switch import SwitchDeviceClass
 
 from . import const
-from .netgear_plus.models import GS3xxSeries
 from .netgear_entities import (
     HomeAssistantNetgearSwitch,
     NetgearBinarySensorEntityDescription,
@@ -24,10 +23,7 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
         const.KEY_COORDINATOR_SWITCH_INFOS
     ]
 
-    if (
-        isinstance(gs_switch.api.switch_model, GS3xxSeries)
-        and gs_switch.api.poe_ports is not None
-    ):
+    if gs_switch.api.poe_ports and len(gs_switch.api.poe_ports) > 0:
         for poe_port in gs_switch.api.poe_ports:
             # poe_port_power_status = port_{poe_port_nr}_poe_power
             switch_entity = NetgearPOESwitchEntity(
@@ -35,7 +31,7 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
                 hub=gs_switch,
                 entity_description=NetgearBinarySensorEntityDescription(
                     key=f"port_{poe_port}_poe_power_active",
-                    name=f"Port {poe_port} POE Power",
+                    name=f"Port {poe_port} PoE Power",
                     device_class=SwitchDeviceClass.OUTLET,
                     # value=gs_switch.api._loaded_switch_infos,
                     # value="off",

@@ -193,10 +193,7 @@ class NetgearSwitchConnector:
         login_password = self.get_login_password()
         url = self.LOGIN_URL.format(ip=self.host)
         _LOGGER.info(
-            "[NetgearSwitchConnector.get_login_cookie] calling request.post for url=%s with login_password=%s",
-            url,
-            login_password,
-        )
+            "[NetgearSwitchConnector.get_login_cookie] calling requests.post for url=%s.", url)
         response = requests.post(
             url,
             data={"password": login_password},
@@ -227,6 +224,13 @@ class NetgearSwitchConnector:
             )
         return False
 
+    def _is_authenticated(self, response):
+        if "content" in dir(response):
+            title = html.fromstring(response.content).xpath("//title")
+            if len(title) == 0 or title[0].text.lower() != 'redirect to login':
+                return True
+        return False
+    
     def delete_login_cookie(self):
         try:
             response_logout = self.fetch_page(self.switch_model.LOGOUT_TEMPLATES)
@@ -234,8 +238,7 @@ class NetgearSwitchConnector:
             self.cookie_name = None
             self.cookie_content = None
             return True
-        if response_logout and \
-                html.fromstring(response_logout).xpath("//title")[0].text.lower() == 'redirect to login':
+        if not self._is_authenticated(response_logout):
             self.cookie_name = None
             self.cookie_content = None
             return True
@@ -250,19 +253,23 @@ class NetgearSwitchConnector:
         jar = requests.cookies.RequestsCookieJar()
         jar.set(self.cookie_name, self.cookie_content, domain=self.host, path="/")
         request_func = requests.post if method == "post" else requests.get
-        _LOGGER.info(
-            "[NetgearSwitchConnector._request] calling request for url=%s", url
-        )
+        _LOGGER.info("[NetgearSwitchConnector._request] calling requests.%s for url=%s", method, url)
+        response = None
         try:
-            return request_func(
-                url,
-                data=data,
-                cookies=jar,
-                timeout=timeout,
-                allow_redirects=allow_redirects,
-            )
+            response = request_func( url, data=data, cookies=jar, timeout=timeout,
+                allow_redirects=allow_redirects)
         except requests.exceptions.Timeout:
-            return None
+            return response
+        # Session expired: refresh login cookie and try again
+        if not self._is_authenticated(response):
+            if not self.get_login_cookie():
+                return None
+            try:
+                response = request_func( url, data=data, cookies=jar, timeout=timeout,
+                    allow_redirects=allow_redirects)
+            except requests.exceptions.Timeout:
+                pass
+        return response
 
     def fetch_page(self, templates, client_hash=None):
         data = None
@@ -441,14 +448,17 @@ class NetgearSwitchConnector:
         return config_by_port
 
     def _parse_poe_port_status(self, tree):
-        current_power = {}
+        poe_output_power = {}
         # Port name: //li[contains(@class,"poe_port_list_item")]//span[contains(@class,"poe_index_li_title")]
         # Power mode: //li[contains(@class,"poe_port_list_item")]//span[contains(@class,"poe-power-mode")]
         # Port status: //li[contains(@class,"poe_port_list_item")]//div[contains(@class,"poe_port_status")]
-        poe_port_power_x = tree.xpath('//li[contains(@class,"poe_port_list_item")]//div[contains(@class,"poe_port_status")]')
-        for i, x in enumerate(poe_port_power_x):
-            current_power[i + 1] = x.xpath(".//span")[5].text
-        return current_power
+        poe_output_power_x = tree.xpath('//li[contains(@class,"poe_port_list_item")]//div[contains(@class,"poe_port_status")]')
+        for i, x in enumerate(poe_output_power_x):
+            try:
+                poe_output_power[i + 1] = float(x.xpath(".//span")[5].text)
+            except ValueError:
+                poe_output_power[i + 1] = 0.0
+        return poe_output_power
 
 
     def _get_gs3xx_switch_info(self, tree, text):
@@ -461,9 +471,6 @@ class NetgearSwitchConnector:
         return None
 
     def get_switch_infos(self):
-        if not self.cookie_name or not self.cookie_content:
-            self.get_login_cookie()
-
         switch_data = {}
 
         if not self._loaded_switch_infos:
@@ -574,7 +581,7 @@ class NetgearSwitchConnector:
             poe_port_status = self._parse_poe_port_status(tree=tree_poeportstatus)
 
             for poe_port_nr, poe_power_status in poe_port_status.items():
-                switch_data[f"port_{poe_port_nr}_poe_current_power"] = poe_power_status
+                switch_data[f"port_{poe_port_nr}_poe_output_power"] = poe_power_status
 
         sample_time = _start_time - self._previous_timestamp
         sample_factor = 1 / sample_time
