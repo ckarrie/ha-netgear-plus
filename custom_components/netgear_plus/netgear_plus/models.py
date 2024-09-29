@@ -152,6 +152,8 @@ class GS316EP(GS3xxSeries):
         ("check_login_form_rand", [True]),
         ("check_login_title_tag", ["GS316EP"]),
     ]
+    LOGIN_TEMPLATE = { "method": "post",
+                       "url": "http://{ip}/" }
 
 
 class GS316EPP(GS316EP):
@@ -161,8 +163,6 @@ class GS316EPP(GS316EP):
         ("check_login_form_rand", [True]),
         ("check_login_title_tag", ["GS316EPP"]),
     ]
-    LOGIN_TEMPLATE = { "method": "post",
-                       "url": "http://{ip}/" }
 
 
 MODELS = [
