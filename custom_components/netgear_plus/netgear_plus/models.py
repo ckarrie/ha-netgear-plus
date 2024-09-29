@@ -11,6 +11,16 @@ class AutodetectedSwitchModel:
     POE_SCHEDULING = False
     CHECKS_AND_RESULTS = []
 
+    AUTODETECT_TEMPLATES = [
+        { "method": "get",
+          "url": "http://{ip}/login.cgi" },
+        { "method": "get",
+          "url": "http://{ip}/" },
+    ]
+
+    LOGIN_TEMPLATE = { "method": "post",
+                       "url": "http://{ip}/login.cgi" }
+
     SWITCH_INFO_TEMPLATES = [
         { "method": "get",
           "url": "http://{ip}/switch_info.htm" },
@@ -32,7 +42,6 @@ class AutodetectedSwitchModel:
         { "method": "post",
           "url": "http://{ip}/logout.cgi" }
     ]
-
 
 
     def __init__(self) -> None:
@@ -152,7 +161,8 @@ class GS316EPP(GS316EP):
         ("check_login_form_rand", [True]),
         ("check_login_title_tag", ["GS316EPP"]),
     ]
-
+    LOGIN_TEMPLATE = { "method": "post",
+                       "url": "http://{ip}/" }
 
 
 MODELS = [

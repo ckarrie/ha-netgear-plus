@@ -26,6 +26,10 @@ PORT_MODUS_SPEED = ["Auto"]
 _LOGGER = logging.getLogger(__name__)
 
 
+class LoginFailedException(Exception):
+    pass
+
+
 class MultipleModelsDetected(Exception):
     pass
 
@@ -37,7 +41,6 @@ class SwitchModelNotDetected(Exception):
 class NetgearSwitchConnector:
     """Representation of a Netgear Switch."""
 
-    LOGIN_URL = "http://{ip}/login.cgi"
     LOGIN_URL_REQUEST_TIMEOUT = 15
 
     def __init__(self, host, password):
@@ -75,42 +78,51 @@ class NetgearSwitchConnector:
         _LOGGER.info(
             "[NetgearSwitchConnector.autodetect_model] called for IP=%s", self.host
         )
-        passed_checks_by_model = {}
-        if self._login_page_response is None:
-            self.check_login_url()
-        matched_models = []
-        for mdl_cls in models.MODELS:
-            mdl = mdl_cls()
-            mdl_name = mdl.MODEL_NAME
-            passed_checks_by_model[mdl_name] = {}
-            autodetect_funcs = mdl.get_autodetect_funcs()
-            for func_name, expected_results in autodetect_funcs:
-                func_result = getattr(self, func_name)()
-                check_successful = func_result in expected_results
-                passed_checks_by_model[mdl_name][func_name] = check_successful
+        for template in models.AutodetectedSwitchModel.AUTODETECT_TEMPLATES:
+            url = template["url"].format(ip=self.host)
+            method = template["method"]
 
-                # check_login_switchinfo_tag beats them all
-                if func_name == "check_login_switchinfo_tag" and check_successful:
-                    matched_models.append(mdl)
+            response = requests.request(
+                method, url, allow_redirects=False, timeout=self.LOGIN_URL_REQUEST_TIMEOUT
+            )
 
-            values_for_current_mdl = passed_checks_by_model[mdl_name].values()
-            if all(values_for_current_mdl):
-                if mdl not in matched_models:
-                    matched_models.append(mdl)
+            if response and response.status_code == 200:
+                self._login_page_response = response
+            else:
+                next
 
-        _LOGGER.info(
-            f"[NetgearSwitchConnector.autodetect_model] passed_checks_by_model={passed_checks_by_model} matched_models={matched_models}"  # noqa: G004
-        )
+            passed_checks_by_model = {}
+            matched_models = []
+            for mdl_cls in models.MODELS:
+                mdl = mdl_cls()
+                mdl_name = mdl.MODEL_NAME
+                passed_checks_by_model[mdl_name] = {}
+                autodetect_funcs = mdl.get_autodetect_funcs()
+                for func_name, expected_results in autodetect_funcs:
+                    func_result = getattr(self, func_name)()
+                    check_successful = func_result in expected_results
+                    passed_checks_by_model[mdl_name][func_name] = check_successful
 
-        if len(matched_models) == 1:
-            # set local settings
-            self._set_instance_attributes_by_model(switch_model=matched_models[0])
-            return self.switch_model
-        if len(matched_models) > 1:
-            raise MultipleModelsDetected(str(matched_models))
-        else:
-            raise SwitchModelNotDetected
+                    # check_login_switchinfo_tag beats them all
+                    if func_name == "check_login_switchinfo_tag" and check_successful:
+                        matched_models.append(mdl)
 
+                values_for_current_mdl = passed_checks_by_model[mdl_name].values()
+                if all(values_for_current_mdl):
+                    if mdl not in matched_models:
+                        matched_models.append(mdl)
+
+            _LOGGER.info(
+                f"[NetgearSwitchConnector.autodetect_model] passed_checks_by_model={passed_checks_by_model} matched_models={matched_models}"  # noqa: G004
+            )
+
+            if len(matched_models) == 1:
+                # set local settings
+                self._set_instance_attributes_by_model(switch_model=matched_models[0])
+                return self.switch_model
+            if len(matched_models) > 1:
+                raise MultipleModelsDetected(str(matched_models))
+        raise SwitchModelNotDetected
 
     def _set_instance_attributes_by_model(
         self, switch_model: models.AutodetectedSwitchModel
@@ -126,9 +138,9 @@ class NetgearSwitchConnector:
                 "io": [0] * self.ports,
             }
 
-    def check_login_url(self):
+    def check_login_url(self, template):
         """Request login page and saves response, checks for HTTP Status 200."""
-        url = self.LOGIN_URL.format(ip=self.host)
+        url = self.template.format(ip=self.host)
         _LOGGER.info(
             "[NetgearSwitchConnector.check_login_url] calling request for url=%s", url
         )
@@ -190,16 +202,21 @@ class NetgearSwitchConnector:
     def get_login_cookie(self):
         if not self.switch_model:
             self.autodetect_model()
+        response = None
         login_password = self.get_login_password()
-        url = self.LOGIN_URL.format(ip=self.host)
+        template = self.switch_model.LOGIN_TEMPLATE
+        url = template["url"].format(ip=self.host)
+        method = template["method"]
         _LOGGER.info(
-            "[NetgearSwitchConnector.get_login_cookie] calling requests.post for url=%s.", url)
-        response = requests.post(
-            url,
+            "[NetgearSwitchConnector.get_login_cookie] calling requests.%s for url=%s", method, url
+        )
+        response = requests.request(method, url,
             data={"password": login_password},
             allow_redirects=True,
-            timeout=self.LOGIN_URL_REQUEST_TIMEOUT,
-        )
+            timeout=self.LOGIN_URL_REQUEST_TIMEOUT)
+        if not response or response.status_code != 200:
+            raise LoginFailedException
+
         for ct in self.switch_model.ALLOWED_COOKIE_TYPES:
             cookie = response.cookies.get(ct, None)
             if cookie:
@@ -235,10 +252,6 @@ class NetgearSwitchConnector:
         try:
             response_logout = self.fetch_page(self.switch_model.LOGOUT_TEMPLATES)
         except requests.exceptions.ConnectionError:
-            self.cookie_name = None
-            self.cookie_content = None
-            return True
-        if not self._is_authenticated(response_logout):
             self.cookie_name = None
             self.cookie_content = None
             return True
