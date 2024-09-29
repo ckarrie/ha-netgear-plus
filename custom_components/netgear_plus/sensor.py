@@ -19,6 +19,7 @@ from homeassistant.const import (
     UnitOfDataRate,
     UnitOfInformation,
     UnitOfTime,
+    UnitOfPower,
 )
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.entity import EntityCategory
@@ -150,6 +151,17 @@ PORT_TEMPLATE = OrderedDict(
     }
 )
 
+POE_STATUS_TEMPLATE = OrderedDict(
+    {
+        "port_{port}_poe_output_power": {
+            "name": "Port {port} PoE Output Power",
+            "native_unit_of_measurement": UnitOfPower.WATT,
+            "device_class": SensorDeviceClass.POWER,
+            "icon": "mdi:flash",
+        },
+    }
+)
+
 AGGREGATED_SENSORS = OrderedDict(
     {
         "sum_port_speed_bps_io": {
@@ -223,6 +235,26 @@ async def async_setup_entry(
                 }
             )
 
+    # Adding port sensors for poe status
+    if gs_switch.api.poe_ports and len(gs_switch.api.poe_ports) > 0:
+        for poe_port in gs_switch.api.poe_ports:
+            for port_sensor_key, port_sensor_data in POE_STATUS_TEMPLATE.items():
+                entity_descriptions_kwargs.append(
+                    {
+                        "key": port_sensor_key.format(port=poe_port),
+                        "name": port_sensor_data["name"].format(port=poe_port),
+                        "native_unit_of_measurement": port_sensor_data.get(
+                            "native_unit_of_measurement", None
+                        ),
+                        "unit_of_measurement": port_sensor_data.get(
+                            "unit_of_measurement", None
+                        ),
+                        "device_class": port_sensor_data["device_class"],
+                        "icon": port_sensor_data.get("icon"),
+                    }
+                )
+
+
     # Adding aggregated sensors
     for sensor_key, sensor_data in AGGREGATED_SENSORS.items():
         entity_descriptions_kwargs.append(
@@ -235,7 +267,7 @@ async def async_setup_entry(
                 "icon": sensor_data.get("icon"),
             }
         )
-
+    
     for description_kwargs in entity_descriptions_kwargs:
         description = NetgearSensorEntityDescription(**description_kwargs)
         port_sensor_entity = NetgearRouterSensorEntity(
