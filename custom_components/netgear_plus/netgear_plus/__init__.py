@@ -207,11 +207,12 @@ class NetgearSwitchConnector:
         template = self.switch_model.LOGIN_TEMPLATE
         url = template["url"].format(ip=self.host)
         method = template["method"]
+        key = template["key"]
         _LOGGER.info(
             "[NetgearSwitchConnector.get_login_cookie] calling requests.%s for url=%s", method, url
         )
         response = requests.request(method, url,
-            data={"password": login_password},
+            data={key: login_password},
             allow_redirects=True,
             timeout=self.LOGIN_URL_REQUEST_TIMEOUT)
         if not response or response.status_code != 200:

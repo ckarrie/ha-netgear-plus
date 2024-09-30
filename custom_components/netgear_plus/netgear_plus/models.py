@@ -19,7 +19,8 @@ class AutodetectedSwitchModel:
     ]
 
     LOGIN_TEMPLATE = { "method": "post",
-                       "url": "http://{ip}/login.cgi" }
+                       "url": "http://{ip}/login.cgi",
+                        "key": "password" }
 
     SWITCH_INFO_TEMPLATES = [
         { "method": "get",
@@ -153,7 +154,8 @@ class GS316EP(GS3xxSeries):
         ("check_login_title_tag", ["GS316EP"]),
     ]
     LOGIN_TEMPLATE = { "method": "post",
-                       "url": "http://{ip}/" }
+                       "url": "http://{ip}/redirect.html",
+                       "key": "LoginPassword" }
 
 
 class GS316EPP(GS316EP):
