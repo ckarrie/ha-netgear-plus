@@ -89,7 +89,7 @@ class NetgearSwitchConnector:
             if response and response.status_code == 200:
                 self._login_page_response = response
             else:
-                next
+                continue
 
             passed_checks_by_model = {}
             matched_models = []
