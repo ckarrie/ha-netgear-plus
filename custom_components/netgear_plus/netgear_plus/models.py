@@ -16,6 +16,8 @@ class AutodetectedSwitchModel:
           "url": "http://{ip}/login.cgi" },
         { "method": "get",
           "url": "http://{ip}/login.htm" },
+        { "method": "get",
+          "url": "http://{ip}/" },
     ]
 
     LOGIN_TEMPLATE = { "method": "post",
