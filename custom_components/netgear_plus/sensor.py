@@ -210,8 +210,7 @@ async def async_setup_entry(
 
     ports_cnt = gs_switch.api.ports
     _LOGGER.info(
-        "[sensor.async_setup_entry] setting up Platform.SENSOR for %d Switch Ports",
-        ports_cnt,
+        f"[sensor.async_setup_entry] setting up Platform.SENSOR for {ports_cnt} Switch Ports"
     )
 
     entity_descriptions_kwargs = []

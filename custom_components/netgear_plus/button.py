@@ -22,9 +22,7 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
         const.KEY_COORDINATOR_SWITCH_INFOS
     ]
 
-    _LOGGER.debug(
-        f"called async_setup_entry for ButtonDeviceClass"
-    )
+    _LOGGER.info(f"[button.async_setup_entry] setting up Platform.BUTTON for {gs_switch.api.poe_ports} Switch Ports")
 
     if gs_switch.api.poe_ports and len(gs_switch.api.poe_ports) > 0:
         for poe_port in gs_switch.api.poe_ports:
@@ -40,9 +38,5 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
             )
 
             entities.append(switch_entity)
-
-            _LOGGER.debug(
-                f"Added NetgearPoEPowerCycleButtonEntity for port {poe_port}."
-            )
 
     async_add_entities(entities)

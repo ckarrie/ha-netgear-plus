@@ -77,7 +77,7 @@ class NetgearSwitchConnector:
         self._loaded_switch_infos = {}
 
     def autodetect_model(self):
-        _LOGGER.info(
+        _LOGGER.debug(
             "[NetgearSwitchConnector.autodetect_model] called for IP=%s", self.host
         )
         for template in models.AutodetectedSwitchModel.AUTODETECT_TEMPLATES:
@@ -114,13 +114,16 @@ class NetgearSwitchConnector:
                     if mdl not in matched_models:
                         matched_models.append(mdl)
 
-            _LOGGER.info(
+            _LOGGER.debug(
                 f"[NetgearSwitchConnector.autodetect_model] passed_checks_by_model={passed_checks_by_model} matched_models={matched_models}"  # noqa: G004
             )
 
             if len(matched_models) == 1:
                 # set local settings
                 self._set_instance_attributes_by_model(switch_model=matched_models[0])
+                _LOGGER.info(
+                f"[NetgearSwitchConnector.autodetect_model] found {matched_models[0]} instance."  # noqa: G004
+            )
                 return self.switch_model
             if len(matched_models) > 1:
                 raise MultipleModelsDetected(str(matched_models))
@@ -143,7 +146,7 @@ class NetgearSwitchConnector:
     def check_login_url(self, template):
         """Request login page and saves response, checks for HTTP Status 200."""
         url = self.template.format(ip=self.host)
-        _LOGGER.info(
+        _LOGGER.debug(
             "[NetgearSwitchConnector.check_login_url] calling request for url=%s", url
         )
         resp = requests.get(
@@ -183,11 +186,11 @@ class NetgearSwitchConnector:
 
     def get_unique_id(self):
         if self.switch_model is None:
-            _LOGGER.info(
+            _LOGGER.debug(
                 "[NetgearSwitchConnector.get_unique_id] switch_model is None, try NetgearSwitchConnector.autodetect_model"
             )
             self.autodetect_model()
-            _LOGGER.info(
+            _LOGGER.debug(
                 "[NetgearSwitchConnector.get_unique_id] now switch_model is %s",
                 str(self.switch_model),
             )
@@ -210,7 +213,7 @@ class NetgearSwitchConnector:
         url = template["url"].format(ip=self.host)
         method = template["method"]
         key = template["key"]
-        _LOGGER.info(
+        _LOGGER.debug(
             "[NetgearSwitchConnector.get_login_cookie] calling requests.%s for url=%s", method, url
         )
         response = requests.request(method, url,
@@ -269,7 +272,7 @@ class NetgearSwitchConnector:
         jar = requests.cookies.RequestsCookieJar()
         jar.set(self.cookie_name, self.cookie_content, domain=self.host, path="/")
         request_func = requests.post if method == "post" else requests.get
-        _LOGGER.info("[NetgearSwitchConnector._request] calling requests.%s for url=%s", method, url)
+        _LOGGER.debug("[NetgearSwitchConnector._request] calling requests.%s for url=%s", method, url)
         response = None
         try:
             response = request_func( url, data=data, cookies=jar, timeout=timeout,
