@@ -3,11 +3,17 @@ from dataclasses import dataclass
 from datetime import date, datetime
 from decimal import Decimal
 import logging
+from tkinter import NO
 
 from homeassistant.components.binary_sensor import (
     BinarySensorDeviceClass,
     BinarySensorEntity,
     BinarySensorEntityDescription,
+)
+from homeassistant.components.button import(
+    ButtonDeviceClass,
+    ButtonEntity,
+    ButtonEntityDescription,
 )
 from homeassistant.components.sensor import (
     RestoreSensor,
@@ -18,6 +24,7 @@ from homeassistant.components.sensor import (
 )
 from homeassistant.components.switch import SwitchEntity
 from homeassistant.core import HomeAssistant, callback
+from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers.entity import EntityCategory
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.typing import StateType
@@ -52,6 +59,10 @@ class NetgearBinarySensorEntityDescription(BinarySensorEntityDescription):
     unit_of_measurement: None = None  # Type override, use native_unit_of_measurement
     native_precision = None
 
+@dataclass
+class NetgearButtonEntityDescription(ButtonEntityDescription):
+    cls: type | None = None
+    device_class: ButtonDeviceClass | None = None
 
 class NetgearRouterSensorEntity(NetgearAPICoordinatorEntity, RestoreSensor):
     """Representation of a device connected to a Netgear router."""
@@ -75,6 +86,9 @@ class NetgearRouterSensorEntity(NetgearAPICoordinatorEntity, RestoreSensor):
         self._value: StateType | date | datetime | Decimal = None
         self.async_update_device()
 
+    def __repr__(self):
+        return f"<NetgearNetgearRouterSensorEntity unique_id={self._unique_id}>"
+    
     @property
     def native_value(self):
         """Return the state of the sensor."""
@@ -130,6 +144,9 @@ class NetgearRouterBinarySensorEntity(NetgearAPICoordinatorEntity, BinarySensorE
         self._value: StateType | bool | str = None
         self._attr_is_on = False
         self.async_update_device()
+
+    def __repr__(self):
+        return f"<NetgearRouterBinarySensorEntity unique_id={self._unique_id}>"
 
     @property
     def native_value(self):
@@ -227,7 +244,7 @@ class NetgearPOESwitchEntity(NetgearAPICoordinatorEntity, SwitchEntity):
         )
         self._value = "on" if successful else "off"
         _LOGGER.info(
-            f"called turn_on_poe_port for port {self.port_nr}: successful={successful}"
+            f"called turn_on_poe_port for uid={self._unique_id} port={self.port_nr}: successful={successful}"
         )
 
     async def async_turn_off(self, **kwargs):
@@ -236,5 +253,45 @@ class NetgearPOESwitchEntity(NetgearAPICoordinatorEntity, SwitchEntity):
         )
         self._value = "off" if successful else "on"
         _LOGGER.info(
-            f"called turn_off_poe_port for port {self.port_nr}: successful={successful}"
+            f"called turn_off_poe_port for uid={self._unique_id} port={self.port_nr}: successful={successful}"
         )
+
+class NetgearPoEPowerCycleButtonEntity(NetgearAPICoordinatorEntity, ButtonEntity):
+    """Represents a PoE Power Cycle Button in HomeAssistant."""
+
+    entity_description = NetgearButtonEntityDescription
+    _attr_device_class = ButtonDeviceClass.RESTART
+
+    def __init__(
+        self,
+        coordinator: DataUpdateCoordinator,
+        hub: HomeAssistantNetgearSwitch,
+        entity_description: NetgearButtonEntityDescription,
+        port_nr: int | None = None,
+    ) -> None:
+        """Initialize a Netgear device."""
+        super().__init__(coordinator, hub)
+        self.entity_description = entity_description
+        self._name = f"{hub.device_name} {entity_description.name}"
+        self._unique_id = (
+            f"{hub.unique_id}-{entity_description.key}-{entity_description.index}"
+        )
+        self.port_nr = port_nr
+        self.hub = hub
+
+    def __repr__(self):
+        return f"<NetgearPoEPowerCycleButtonEntity unique_id={self._unique_id} port_nr={self.port_nr}>"
+
+    async def async_press(self) -> None:
+        """Power Cycle Port."""
+
+        successful = await self.hub.hass.async_add_executor_job(
+            self.hub.api.power_cycle_poe_port, self.port_nr
+        )
+        _LOGGER.info(
+            f"called power_cycle_poe_port for uid={self._unique_id} port={self.port_nr}: successful={successful}"
+        )
+        if not successful:
+            raise HomeAssistantError(f"Running command '{self.key}' failed")
+
+        await self.coordinator.async_request_refresh()

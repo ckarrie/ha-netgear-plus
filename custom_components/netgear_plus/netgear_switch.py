@@ -118,29 +118,3 @@ class NetgearAPICoordinatorEntity(CoordinatorEntity):
             identifiers={(DOMAIN, self._switch.unique_id)},
         )
 
-
-class HAGS108SwitchEntity(Entity):
-    """Base class for a Netgear router entity without coordinator."""
-
-    def __init__(self, switch: HomeAssistantNetgearSwitch) -> None:
-        """Initialize a Netgear device."""
-        self._switch = switch
-        self._name = switch.device_name
-        self._unique_id = switch.unique_id
-
-    @property
-    def unique_id(self) -> str:
-        """Return a unique ID."""
-        return self._unique_id
-
-    @property
-    def name(self) -> str:
-        """Return the name."""
-        return self._name
-
-    @property
-    def device_info(self) -> DeviceInfo:
-        """Return the device information."""
-        return DeviceInfo(
-            identifiers={(DOMAIN, self._switch.unique_id)},
-        )
