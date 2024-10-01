@@ -156,7 +156,7 @@ class GS316EP(GS3xxSeries):
         ("check_login_title_tag", ["GS316EP"]),
     ]
     LOGIN_TEMPLATE = { "method": "post",
-                       "url": "http://{ip}/redirect.html",
+                       "url": "http://{ip}/homepage.html",
                        "key": "LoginPassword" }
 
 
