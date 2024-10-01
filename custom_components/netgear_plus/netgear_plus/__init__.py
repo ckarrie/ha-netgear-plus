@@ -8,6 +8,8 @@ import requests
 
 from . import models, netgear_crypt
 
+SWITCH_STATES = [ "on", "off" ]
+
 API_V2_CHECKS = {
     "bootloader": ["V1.00.03", "V2.06.01", "V2.06.02", "V2.06.03"],
     "firmware": ["V2.06.24GR", "V2.06.24EN"],
@@ -488,6 +490,8 @@ class NetgearSwitchConnector:
         switch_data = {}
 
         if not self._loaded_switch_infos:
+            if not self.switch_model:
+                self.autodetect_model()
             page = self.fetch_page(self.switch_model.SWITCH_INFO_TEMPLATES)
             if not page:
                 return None
@@ -763,7 +767,9 @@ class NetgearSwitchConnector:
 
         return switch_data
 
-    def turn_on_poe_port(self, poe_port, turn_on=True):
+    def switch_poe_port(self, poe_port, state):
+        if state not in SWITCH_STATES:
+            return False
         if poe_port in self.poe_ports:
             for template in self.switch_model.POE_PORT_CONFIG_TEMPLATES:
                 url = template["url"].format(ip=self.host)
@@ -771,15 +777,33 @@ class NetgearSwitchConnector:
                     "hash": self._client_hash,
                     "ACTION": "Apply",
                     "portID": poe_port - 1,
-                    "ADMIN_MODE": 1 if turn_on else 0,
+                    "ADMIN_MODE": 1 if state == "on" else 0,
                 }
                 resp = self._request("post", url, data=data)
                 if resp.status_code == 200:
-                    self._loaded_switch_infos[f"port_{poe_port}_poe_power_active"] = (
-                        "on" if turn_on else "off"
-                    )
+                    self._loaded_switch_infos[f"port_{poe_port}_poe_power_active"] = state
                     return True
         return False
 
+    def turn_on_poe_port(self, poe_port):
+        return self.switch_poe_port(poe_port, "on")
+
     def turn_off_poe_port(self, poe_port):
-        return self.turn_on_poe_port(poe_port=poe_port, turn_on=False)
+        return self.switch_poe_port(poe_port, "off")
+
+    def power_cycle_poe_port(self, poe_port):
+        if poe_port in self.poe_ports:
+            for template in self.switch_model.POE_PORT_CONFIG_TEMPLATES:
+                url = template["url"].format(ip=self.host)
+                data = {
+                    "hash": self._client_hash,
+                    "ACTION": "Reset",
+                    "port" + str(poe_port - 1) : "checked",
+                }
+                resp = self._request("post", url, data=data)
+                if resp.status_code == 200 and str(resp.content.strip()) == "b'SUCCESS'":
+                    return True
+                else:
+                    _LOGGER.warning("NetgearSwitchConnector.power_cycle_poe_port response was %s", resp.content.strip())
+        return False
+

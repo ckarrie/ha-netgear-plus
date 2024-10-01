@@ -158,6 +158,7 @@ class GS316EP(GS3xxSeries):
     LOGIN_TEMPLATE = { "method": "post",
                        "url": "http://{ip}/homepage.html",
                        "key": "LoginPassword" }
+    ALLOWED_COOKIE_TYPES = ["gambitCookie", "SID"]
 
 
 class GS316EPP(GS316EP):
