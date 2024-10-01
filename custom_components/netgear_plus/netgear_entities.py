@@ -3,7 +3,6 @@ from dataclasses import dataclass
 from datetime import date, datetime
 from decimal import Decimal
 import logging
-from tkinter import NO
 
 from homeassistant.components.binary_sensor import (
     BinarySensorDeviceClass,
