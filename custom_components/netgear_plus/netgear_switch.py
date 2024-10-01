@@ -94,7 +94,6 @@ class NetgearCoordinatorEntity(CoordinatorEntity):
     @callback
     def _handle_coordinator_update(self) -> None:
         """Handle updated data from the coordinator."""
-        self.async_update_device()
         super()._handle_coordinator_update()
 
     @property
@@ -128,3 +127,9 @@ class NetgearAPICoordinatorEntity(NetgearCoordinatorEntity):
     @callback
     def async_update_device(self) -> None:
         """Update the Netgear device."""
+    
+    @callback
+    def _handle_coordinator_update(self) -> None:
+        """Handle updated data from the coordinator."""
+        self.async_update_device()
+        super()._handle_coordinator_update()
