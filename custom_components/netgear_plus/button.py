@@ -13,7 +13,7 @@ _LOGGER = logging.getLogger(__name__)
 
 
 async def async_setup_entry(hass, config_entry, async_add_entities):
-    """Set up the Fritzbox smarthome switch from config_entry."""
+    """Set up the switch from config_entry."""
     entities = []
     gs_switch: HomeAssistantNetgearSwitch = hass.data[const.DOMAIN][
         config_entry.entry_id
@@ -22,9 +22,12 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
         const.KEY_COORDINATOR_SWITCH_INFOS
     ]
 
+    _LOGGER.debug(
+        f"called async_setup_entry for ButtonDeviceClass"
+    )
+
     if gs_switch.api.poe_ports and len(gs_switch.api.poe_ports) > 0:
         for poe_port in gs_switch.api.poe_ports:
-            # poe_port_power_status = port_{poe_port_nr}_poe_power
             switch_entity = NetgearPoEPowerCycleButtonEntity(
                 coordinator=coordinator_switch_infos,
                 hub=gs_switch,
@@ -37,5 +40,9 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
             )
 
             entities.append(switch_entity)
+
+            _LOGGER.debug(
+                f"Added NetgearPoEPowerCycleButtonEntity for port {poe_port}."
+            )
 
     async_add_entities(entities)
