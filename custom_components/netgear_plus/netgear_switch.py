@@ -78,7 +78,7 @@ class HomeAssistantNetgearSwitch:
             return await self.hass.async_add_executor_job(self.api.get_switch_infos)
 
 
-class NetgearAPICoordinatorEntity(CoordinatorEntity):
+class NetgearCoordinatorEntity(CoordinatorEntity):
     """Base class for a Netgear router entity."""
 
     def __init__(
@@ -90,10 +90,6 @@ class NetgearAPICoordinatorEntity(CoordinatorEntity):
         self._name = switch.device_name
         self._unique_id = switch.unique_id
 
-    @abstractmethod
-    @callback
-    def async_update_device(self) -> None:
-        """Update the Netgear device."""
 
     @callback
     def _handle_coordinator_update(self) -> None:
@@ -118,3 +114,17 @@ class NetgearAPICoordinatorEntity(CoordinatorEntity):
             identifiers={(DOMAIN, self._switch.unique_id)},
         )
 
+
+class NetgearAPICoordinatorEntity(NetgearCoordinatorEntity):
+    """Base class for a Netgear router entity."""
+
+    def __init__(
+        self, coordinator: DataUpdateCoordinator, switch: HomeAssistantNetgearSwitch
+    ) -> None:
+        """Initialize a Netgear device."""
+        super().__init__(coordinator, switch)
+
+    @abstractmethod
+    @callback
+    def async_update_device(self) -> None:
+        """Update the Netgear device."""

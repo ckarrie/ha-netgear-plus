@@ -29,7 +29,11 @@ from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.typing import StateType
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
 
-from .netgear_switch import NetgearAPICoordinatorEntity, HomeAssistantNetgearSwitch
+from .netgear_switch import (
+    NetgearCoordinatorEntity,
+    NetgearAPICoordinatorEntity,
+    HomeAssistantNetgearSwitch,
+)
 from . import const
 
 _LOGGER = logging.getLogger(__name__)
@@ -255,7 +259,7 @@ class NetgearPOESwitchEntity(NetgearAPICoordinatorEntity, SwitchEntity):
             f"called turn_off_poe_port for uid={self._unique_id} port={self.port_nr}: successful={successful}"
         )
 
-class NetgearPoEPowerCycleButtonEntity(NetgearAPICoordinatorEntity, ButtonEntity):
+class NetgearPoEPowerCycleButtonEntity(NetgearCoordinatorEntity, ButtonEntity):
     """Represents a PoE Power Cycle Button in HomeAssistant."""
 
     entity_description = NetgearButtonEntityDescription
