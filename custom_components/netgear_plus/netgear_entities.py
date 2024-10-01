@@ -62,10 +62,13 @@ class NetgearBinarySensorEntityDescription(BinarySensorEntityDescription):
     unit_of_measurement: None = None  # Type override, use native_unit_of_measurement
     native_precision = None
 
+
 @dataclass
 class NetgearButtonEntityDescription(ButtonEntityDescription):
     cls: type | None = None
     device_class: ButtonDeviceClass | None = None
+    index: int = 0
+
 
 class NetgearRouterSensorEntity(NetgearAPICoordinatorEntity, RestoreSensor):
     """Representation of a device connected to a Netgear router."""
