@@ -12,5 +12,5 @@
       "deviceType": "urn:schemas-upnp-org:device:InternetGatewayDevice:1"
     }
   ],
-  "version": "0.6.3.10"
+  "version": "0.6.5"
 }
