@@ -8,6 +8,8 @@ import requests
 
 from . import models, netgear_crypt
 
+SWITCH_STATES = [ "on", "off" ]
+
 API_V2_CHECKS = {
     "bootloader": ["V1.00.03", "V2.06.01", "V2.06.02", "V2.06.03"],
     "firmware": ["V2.06.24GR", "V2.06.24EN"],
@@ -75,7 +77,7 @@ class NetgearSwitchConnector:
         self._loaded_switch_infos = {}
 
     def autodetect_model(self):
-        _LOGGER.info(
+        _LOGGER.debug(
             "[NetgearSwitchConnector.autodetect_model] called for IP=%s", self.host
         )
         for template in models.AutodetectedSwitchModel.AUTODETECT_TEMPLATES:
@@ -112,13 +114,16 @@ class NetgearSwitchConnector:
                     if mdl not in matched_models:
                         matched_models.append(mdl)
 
-            _LOGGER.info(
+            _LOGGER.debug(
                 f"[NetgearSwitchConnector.autodetect_model] passed_checks_by_model={passed_checks_by_model} matched_models={matched_models}"  # noqa: G004
             )
 
             if len(matched_models) == 1:
                 # set local settings
                 self._set_instance_attributes_by_model(switch_model=matched_models[0])
+                _LOGGER.info(
+                f"[NetgearSwitchConnector.autodetect_model] found {matched_models[0]} instance."  # noqa: G004
+            )
                 return self.switch_model
             if len(matched_models) > 1:
                 raise MultipleModelsDetected(str(matched_models))
@@ -141,7 +146,7 @@ class NetgearSwitchConnector:
     def check_login_url(self, template):
         """Request login page and saves response, checks for HTTP Status 200."""
         url = self.template.format(ip=self.host)
-        _LOGGER.info(
+        _LOGGER.debug(
             "[NetgearSwitchConnector.check_login_url] calling request for url=%s", url
         )
         resp = requests.get(
@@ -181,11 +186,11 @@ class NetgearSwitchConnector:
 
     def get_unique_id(self):
         if self.switch_model is None:
-            _LOGGER.info(
+            _LOGGER.debug(
                 "[NetgearSwitchConnector.get_unique_id] switch_model is None, try NetgearSwitchConnector.autodetect_model"
             )
             self.autodetect_model()
-            _LOGGER.info(
+            _LOGGER.debug(
                 "[NetgearSwitchConnector.get_unique_id] now switch_model is %s",
                 str(self.switch_model),
             )
@@ -208,7 +213,7 @@ class NetgearSwitchConnector:
         url = template["url"].format(ip=self.host)
         method = template["method"]
         key = template["key"]
-        _LOGGER.info(
+        _LOGGER.debug(
             "[NetgearSwitchConnector.get_login_cookie] calling requests.%s for url=%s", method, url
         )
         response = requests.request(method, url,
@@ -267,7 +272,7 @@ class NetgearSwitchConnector:
         jar = requests.cookies.RequestsCookieJar()
         jar.set(self.cookie_name, self.cookie_content, domain=self.host, path="/")
         request_func = requests.post if method == "post" else requests.get
-        _LOGGER.info("[NetgearSwitchConnector._request] calling requests.%s for url=%s", method, url)
+        _LOGGER.debug("[NetgearSwitchConnector._request] calling requests.%s for url=%s", method, url)
         response = None
         try:
             response = request_func( url, data=data, cookies=jar, timeout=timeout,
@@ -488,6 +493,8 @@ class NetgearSwitchConnector:
         switch_data = {}
 
         if not self._loaded_switch_infos:
+            if not self.switch_model:
+                self.autodetect_model()
             page = self.fetch_page(self.switch_model.SWITCH_INFO_TEMPLATES)
             if not page:
                 return None
@@ -763,7 +770,9 @@ class NetgearSwitchConnector:
 
         return switch_data
 
-    def turn_on_poe_port(self, poe_port, turn_on=True):
+    def switch_poe_port(self, poe_port, state):
+        if state not in SWITCH_STATES:
+            return False
         if poe_port in self.poe_ports:
             for template in self.switch_model.POE_PORT_CONFIG_TEMPLATES:
                 url = template["url"].format(ip=self.host)
@@ -771,15 +780,33 @@ class NetgearSwitchConnector:
                     "hash": self._client_hash,
                     "ACTION": "Apply",
                     "portID": poe_port - 1,
-                    "ADMIN_MODE": 1 if turn_on else 0,
+                    "ADMIN_MODE": 1 if state == "on" else 0,
                 }
                 resp = self._request("post", url, data=data)
                 if resp.status_code == 200:
-                    self._loaded_switch_infos[f"port_{poe_port}_poe_power_active"] = (
-                        "on" if turn_on else "off"
-                    )
+                    self._loaded_switch_infos[f"port_{poe_port}_poe_power_active"] = state
                     return True
         return False
 
+    def turn_on_poe_port(self, poe_port):
+        return self.switch_poe_port(poe_port, "on")
+
     def turn_off_poe_port(self, poe_port):
-        return self.turn_on_poe_port(poe_port=poe_port, turn_on=False)
+        return self.switch_poe_port(poe_port, "off")
+
+    def power_cycle_poe_port(self, poe_port):
+        if poe_port in self.poe_ports:
+            for template in self.switch_model.POE_PORT_CONFIG_TEMPLATES:
+                url = template["url"].format(ip=self.host)
+                data = {
+                    "hash": self._client_hash,
+                    "ACTION": "Reset",
+                    "port" + str(poe_port - 1) : "checked",
+                }
+                resp = self._request("post", url, data=data)
+                if resp.status_code == 200 and str(resp.content.strip()) == "b'SUCCESS'":
+                    return True
+                else:
+                    _LOGGER.warning("NetgearSwitchConnector.power_cycle_poe_port response was %s", resp.content.strip())
+        return False
+
