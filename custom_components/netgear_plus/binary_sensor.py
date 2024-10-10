@@ -1,49 +1,32 @@
+"""HomeAssistant integration for Netgear Switches - Binary Switches definitions."""
+
 from __future__ import annotations
 
-from collections import OrderedDict
-from collections.abc import Callable
-from dataclasses import dataclass
-from datetime import date, datetime
-from decimal import Decimal
 import logging
+from collections import OrderedDict
+from typing import TYPE_CHECKING
 
 from homeassistant.components.binary_sensor import BinarySensorDeviceClass
-from homeassistant.components.sensor import (
-    RestoreSensor,
-    SensorDeviceClass,
-    SensorEntity,
-    SensorEntityDescription,
-    SensorStateClass,
-)
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import (
-    PERCENTAGE,
-    UnitOfDataRate,
-    UnitOfInformation,
-    UnitOfTime,
-)
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers.entity import EntityCategory
-from homeassistant.helpers.entity_platform import AddEntitiesCallback
-from homeassistant.helpers.typing import StateType
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
 
 from .const import DOMAIN, KEY_COORDINATOR_SWITCH_INFOS, KEY_SWITCH
 from .netgear_entities import (
     NetgearBinarySensorEntityDescription,
     NetgearRouterBinarySensorEntity,
 )
-from .netgear_switch import NetgearAPICoordinatorEntity, HomeAssistantNetgearSwitch
+
+if TYPE_CHECKING:
+    from homeassistant.config_entries import ConfigEntry
+    from homeassistant.core import HomeAssistant
+    from homeassistant.helpers.entity_platform import AddEntitiesCallback
+
+    from .netgear_switch import HomeAssistantNetgearSwitch
 
 _LOGGER = logging.getLogger(__name__)
-
-# Todo add connectivity sensors as binary
 
 PORT_TEMPLATE = OrderedDict(
     {
         "port_{port}_status": {
             "name": "Port {port} Status",
-            # "native_unit_of_measurement": BinarySensorDeviceClass.CONNECTIVITY,
             "device_class": BinarySensorDeviceClass.CONNECTIVITY,
             #'icon': "mdi:upload"
         },
@@ -62,14 +45,13 @@ async def async_setup_entry(
         KEY_COORDINATOR_SWITCH_INFOS
     ]
 
-    # print("coordinator_switch_infos.data=", coordinator_switch_infos.data)
-
     # Router entities
     switch_entities = []
 
-    ports_cnt = gs_switch.api.ports
+    ports_cnt = gs_switch.api.ports or 0
     _LOGGER.info(
-        "[binary_sensor.async_setup_entry] setting up Platform.BINARY_SENSOR for %d Switch Ports",
+        "[binary_sensor.async_setup_entry] \
+setting up Platform.BINARY_SENSOR for %d Switch Ports",
         ports_cnt,
     )
     for i in range(ports_cnt):
@@ -81,7 +63,7 @@ async def async_setup_entry(
                 name=port_sensor_data["name"].format(port=port_nr),
                 device_class=port_sensor_data["device_class"],
                 icon=port_sensor_data.get("icon"),
-                value=value,
+                value=value,  # type: ignore[valid-type]
             )
             port_status_binarysensor_entity = NetgearRouterBinarySensorEntity(
                 coordinator=coordinator_switch_infos,

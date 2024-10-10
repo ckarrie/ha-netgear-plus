@@ -1,6 +1,11 @@
+"""Module that sets up the button entities for the Netgear Plus integration."""
+
 import logging
 
 from homeassistant.components.button import ButtonDeviceClass
+from homeassistant.config_entries import ConfigEntry
+from homeassistant.core import HomeAssistant
+from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
 from . import const
 from .netgear_entities import (
@@ -12,8 +17,12 @@ from .netgear_entities import (
 _LOGGER = logging.getLogger(__name__)
 
 
-async def async_setup_entry(hass, config_entry, async_add_entities):
-    """Set up the switch from config_entry."""
+async def async_setup_entry(
+    hass: HomeAssistant,
+    config_entry: ConfigEntry,
+    async_add_entities: AddEntitiesCallback,
+) -> None:
+    """Set up the button from config_entry."""
     entities = []
     gs_switch: HomeAssistantNetgearSwitch = hass.data[const.DOMAIN][
         config_entry.entry_id
@@ -22,7 +31,10 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
         const.KEY_COORDINATOR_SWITCH_INFOS
     ]
 
-    _LOGGER.info(f"[button.async_setup_entry] setting up Platform.BUTTON for {gs_switch.api.poe_ports} Switch Ports")
+    _LOGGER.info(
+        "[button.async_setup_entry] setting up Platform.BUTTON for %s Switch Ports",
+        gs_switch.api.poe_ports,
+    )
 
     if gs_switch.api.poe_ports and len(gs_switch.api.poe_ports) > 0:
         for poe_port in gs_switch.api.poe_ports:

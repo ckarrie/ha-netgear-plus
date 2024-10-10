@@ -1,5 +1,5 @@
 {
-    "name": "ludeeus/integration_blueprint",
+    "name": "ckarrie/ha-netgear-plus",
     "image": "mcr.microsoft.com/devcontainers/python:3.12",
     "postCreateCommand": "scripts/setup",
     "forwardPorts": [
@@ -18,7 +18,9 @@
                 "github.vscode-pull-request-github",
                 "ms-python.python",
                 "ms-python.vscode-pylance",
-                "ryanluker.vscode-coverage-gutters"
+                "ryanluker.vscode-coverage-gutters",
+                "esbenp.prettier-vscode",
+                "visualstudioexptteam.vscodeintellicode",
             ],
             "settings": {
                 "files.eol": "\n",

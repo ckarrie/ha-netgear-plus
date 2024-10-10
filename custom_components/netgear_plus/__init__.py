@@ -2,13 +2,16 @@
 
 from __future__ import annotations
 
-from datetime import timedelta
 import logging
-from typing import Any
+from datetime import timedelta
+from typing import TYPE_CHECKING, Any
 
-from homeassistant.config_entries import ConfigEntry
+if TYPE_CHECKING:
+    from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import CONF_HOST
-from homeassistant.core import HomeAssistant
+
+if TYPE_CHECKING:
+    from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import ConfigEntryNotReady
 from homeassistant.helpers import device_registry as dr
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
@@ -20,12 +23,12 @@ from .const import (
     PLATFORMS,
     SCAN_INTERVAL,
 )
-from .errors import CannotLoginException
+from .errors import CannotLoginError
 from .netgear_switch import HomeAssistantNetgearSwitch
 
 _LOGGER = logging.getLogger(__name__)
 
-SCAN_INTERVAL = timedelta(seconds=SCAN_INTERVAL)
+SCAN_INTERVAL_TIMEDELTA = timedelta(seconds=SCAN_INTERVAL)
 
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
@@ -34,14 +37,16 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     try:
         if not await gs_switch.async_setup():
             raise ConfigEntryNotReady
-    except CannotLoginException as ex:
+    except CannotLoginError as ex:
         raise ConfigEntryNotReady from ex
 
     hass.data.setdefault(DOMAIN, {})
 
     entry.async_on_unload(entry.add_update_listener(update_listener))
 
-    assert entry.unique_id
+    if not entry.unique_id:
+        message = "entry.unique_id not defined."
+        raise NameError(message)
     device_registry = dr.async_get(hass)
     device_registry.async_get_or_create(
         config_entry_id=entry.entry_id,
@@ -62,7 +67,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         _LOGGER,
         name=f"{gs_switch.device_name} Switch infos",
         update_method=async_update_switch_infos,
-        update_interval=SCAN_INTERVAL,
+        update_interval=SCAN_INTERVAL_TIMEDELTA,
     )
 
     await coordinator_switch_infos.async_config_entry_first_refresh()
@@ -80,8 +85,6 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Unload a config entry."""
     unload_ok = await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
-
-    gs_switch = hass.data[DOMAIN][entry.entry_id][KEY_SWITCH]
 
     if unload_ok:
         hass.data[DOMAIN].pop(entry.entry_id)

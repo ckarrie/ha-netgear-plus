@@ -1,81 +1,81 @@
 """Definitions of auto-detectable Switch models."""
 
+from typing import ClassVar
+
 
 class AutodetectedSwitchModel:
-    ALLOWED_COOKIE_TYPES = ["SID"]
-    MODEL_NAME = None
-    PORTS = None
-    POE_PORTS = []
+    """Netgear Plus Switch Model Definition."""
+
+    ALLOWED_COOKIE_TYPES: ClassVar = ["SID"]
+    MODEL_NAME = ""
+    PORTS = 0
+    POE_PORTS: ClassVar = []
     POE_MAX_POWER_ALL_PORTS = None
     POE_MAX_POWER_SINGLE_PORT = None
     POE_SCHEDULING = False
-    CHECKS_AND_RESULTS = []
+    CHECKS_AND_RESULTS: ClassVar = []
 
-    AUTODETECT_TEMPLATES = [
-        { "method": "get",
-          "url": "http://{ip}/login.cgi" },
-        { "method": "get",
-          "url": "http://{ip}/login.htm" },
-        { "method": "get",
-          "url": "http://{ip}/" },
+    AUTODETECT_TEMPLATES: ClassVar = [
+        {"method": "get", "url": "http://{ip}/login.cgi"},
+        {"method": "get", "url": "http://{ip}/login.htm"},
+        {"method": "get", "url": "http://{ip}/"},
     ]
 
-    LOGIN_TEMPLATE = { "method": "post",
-                       "url": "http://{ip}/login.cgi",
-                        "key": "password" }
+    LOGIN_TEMPLATE: ClassVar = {
+        "method": "post",
+        "url": "http://{ip}/login.cgi",
+        "key": "password",
+    }
 
-    SWITCH_INFO_TEMPLATES = [
-        { "method": "get",
-          "url": "http://{ip}/switch_info.htm" },
-        { "method": "get",
-          "url": "http://{ip}/switch_info.cgi" }
+    SWITCH_INFO_TEMPLATES: ClassVar = [
+        {"method": "get", "url": "http://{ip}/switch_info.htm"},
+        {"method": "get", "url": "http://{ip}/switch_info.cgi"},
     ]
-    PORT_STATISTICS_TEMPLATES = [
-        { "method": "post",
-          "url": "http://{ip}/portStatistics.cgi" }
+    PORT_STATISTICS_TEMPLATES: ClassVar = [
+        {"method": "post", "url": "http://{ip}/portStatistics.cgi"}
     ]
-    PORT_STATUS_TEMPLATES = [
-        { "method": "post",
-          "url": "http://{ip}/status.htm" }
+    PORT_STATUS_TEMPLATES: ClassVar = [
+        {"method": "post", "url": "http://{ip}/status.htm"}
     ]
-    POE_PORT_CONFIG_TEMPLATES = [
-
-    ]
-    LOGOUT_TEMPLATES = [
-        { "method": "post",
-          "url": "http://{ip}/logout.cgi" }
-    ]
-
+    POE_PORT_CONFIG_TEMPLATES: ClassVar = []
+    LOGOUT_TEMPLATES: ClassVar = [{"method": "post", "url": "http://{ip}/logout.cgi"}]
 
     def __init__(self) -> None:
-        pass
+        """Empty contructor."""
 
-    def get_autodetect_funcs(self):
+    def get_autodetect_funcs(self) -> list:
+        """Return list with detection functions."""
         return self.CHECKS_AND_RESULTS
 
 
 class GS105E(AutodetectedSwitchModel):
+    """Definition for Netgear GS105E model."""
+
     MODEL_NAME = "GS105E"
     PORTS = 5
-    CHECKS_AND_RESULTS = [
+    CHECKS_AND_RESULTS: ClassVar = [
         ("check_login_form_rand", [True]),
         ("check_login_title_tag", ["GS105E"]),
     ]
 
 
 class GS105Ev2(AutodetectedSwitchModel):
+    """Definition for Netgear CG105Ev2 model."""
+
     MODEL_NAME = "GS105Ev2"
     PORTS = 5
-    CHECKS_AND_RESULTS = [
+    CHECKS_AND_RESULTS: ClassVar = [
         ("check_login_form_rand", [True]),
         ("check_login_title_tag", ["GS105Ev2"]),
     ]
 
 
 class GS108E(AutodetectedSwitchModel):
+    """Definition for Netgear GS108E model."""
+
     MODEL_NAME = "GS108E"
     PORTS = 8
-    CHECKS_AND_RESULTS = [
+    CHECKS_AND_RESULTS: ClassVar = [
         ("check_login_form_rand", [True]),
         ("check_login_title_tag", ["GS108E"]),
         (
@@ -83,13 +83,15 @@ class GS108E(AutodetectedSwitchModel):
             ["GS308E - 8-Port Gigabit Ethernet Smart Managed Plus Switch"],
         ),
     ]
-    ALLOWED_COOKIE_TYPES = ["GS108SID", "SID"]
+    ALLOWED_COOKIE_TYPES: ClassVar = ["GS108SID", "SID"]
 
 
 class GS108Ev3(AutodetectedSwitchModel):
+    """Definition for Netgear GW108Ev3 model."""
+
     MODEL_NAME = "GS108Ev3"
     PORTS = 8
-    CHECKS_AND_RESULTS = [
+    CHECKS_AND_RESULTS: ClassVar = [
         ("check_login_form_rand", [True]),
         ("check_login_title_tag", ["GS108Ev3"]),
         (
@@ -100,71 +102,79 @@ class GS108Ev3(AutodetectedSwitchModel):
             ],
         ),
     ]
-    ALLOWED_COOKIE_TYPES = ["GS108SID", "SID"]
+    ALLOWED_COOKIE_TYPES: ClassVar = ["GS108SID", "SID"]
 
 
 class GS3xxSeries(AutodetectedSwitchModel):
-    SWITCH_INFO_TEMPLATES = [
-        { "method": "get",
-          "url": "http://{ip}/dashboard.cgi" }
+    """Parent class definition for Netgear GS3xx series."""
+
+    SWITCH_INFO_TEMPLATES: ClassVar = [
+        {"method": "get", "url": "http://{ip}/dashboard.cgi"}
     ]
-    PORT_STATISTICS_TEMPLATES = [
-        { "method": "get",
-          "url": "http://{ip}/portStatistics.cgi" }
+    PORT_STATISTICS_TEMPLATES: ClassVar = [
+        {"method": "get", "url": "http://{ip}/portStatistics.cgi"}
     ]
-    POE_PORT_CONFIG_TEMPLATES = [
-        { "method": "get",
-          "url": "http://{ip}/PoEPortConfig.cgi" }
+    POE_PORT_CONFIG_TEMPLATES: ClassVar = [
+        {"method": "get", "url": "http://{ip}/PoEPortConfig.cgi"}
     ]
-    POE_PORT_STATUS_TEMPLATES = [
-        { "method": "get",
-          "url": "http://{ip}/getPoePortStatus.cgi" }
+    POE_PORT_STATUS_TEMPLATES: ClassVar = [
+        {"method": "get", "url": "http://{ip}/getPoePortStatus.cgi"}
     ]
 
 
 class GS305EP(GS3xxSeries):
+    """Definition for Netgear GS305EP model."""
+
     MODEL_NAME = "GS305EP"
     PORTS = 5
-    POE_PORTS = [1, 2, 3, 4]
+    POE_PORTS: ClassVar = [1, 2, 3, 4]
     POE_MAX_POWER_ALL_PORTS = 63
-    CHECKS_AND_RESULTS = [
+    CHECKS_AND_RESULTS: ClassVar = [
         ("check_login_form_rand", [True]),
         ("check_login_title_tag", ["GS305EP"]),
     ]
 
 
 class GS308EP(GS3xxSeries):
+    """Definition for Netgear GS308EP model."""
+
     MODEL_NAME = "GS308EP"
     PORTS = 8
-    POE_PORTS = [1, 2, 3, 4, 5, 6, 7, 8]
+    POE_PORTS: ClassVar = [1, 2, 3, 4, 5, 6, 7, 8]
     POE_MAX_POWER_ALL_PORTS = 62
-    CHECKS_AND_RESULTS = [
+    CHECKS_AND_RESULTS: ClassVar = [
         ("check_login_form_rand", [True]),
         ("check_login_title_tag", ["GS308EP"]),
     ]
 
 
 class GS316EP(GS3xxSeries):
+    """Definition for Netgear GS316EP model."""
+
     MODEL_NAME = "GS316EP"
     PORTS = 16
-    POE_PORTS = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]
+    POE_PORTS: ClassVar = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]
     POE_MAX_POWER_ALL_PORTS = 180
     POE_MAX_POWER_SINGLE_PORT = 30
     POE_SCHEDULING = True
-    CHECKS_AND_RESULTS = [
+    CHECKS_AND_RESULTS: ClassVar = [
         ("check_login_form_rand", [True]),
         ("check_login_title_tag", ["GS316EP"]),
     ]
-    LOGIN_TEMPLATE = { "method": "post",
-                       "url": "http://{ip}/homepage.html",
-                       "key": "LoginPassword" }
-    ALLOWED_COOKIE_TYPES = ["gambitCookie"]
+    LOGIN_TEMPLATE: ClassVar = {
+        "method": "post",
+        "url": "http://{ip}/homepage.html",
+        "key": "LoginPassword",
+    }
+    ALLOWED_COOKIE_TYPES: ClassVar = ["gambitCookie"]
 
 
 class GS316EPP(GS316EP):
+    """Definition for Netgear GS316EPP model."""
+
     MODEL_NAME = "GS316EPP"
     POE_POWER_ALL_PORTS = 231
-    CHECKS_AND_RESULTS = [
+    CHECKS_AND_RESULTS: ClassVar = [
         ("check_login_form_rand", [True]),
         ("check_login_title_tag", ["GS316EPP"]),
     ]

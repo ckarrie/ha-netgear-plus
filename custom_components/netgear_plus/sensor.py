@@ -2,34 +2,36 @@
 
 from __future__ import annotations
 
-from collections import OrderedDict
 import logging
+from collections import OrderedDict
+from typing import TYPE_CHECKING
 
-from homeassistant.components.binary_sensor import BinarySensorDeviceClass
-from homeassistant.components.sensor import (
-    RestoreSensor,
+from homeassistant.components.sensor.const import (
     SensorDeviceClass,
-    SensorEntity,
-    SensorEntityDescription,
-    SensorStateClass,
 )
-from homeassistant.config_entries import ConfigEntry
+
+if TYPE_CHECKING:
+    from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import (
-    PERCENTAGE,
     UnitOfDataRate,
     UnitOfInformation,
-    UnitOfTime,
     UnitOfPower,
+    UnitOfTime,
 )
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers.entity import EntityCategory
-from homeassistant.helpers.entity_platform import AddEntitiesCallback
-from homeassistant.helpers.typing import StateType
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
+
+if TYPE_CHECKING:
+    from homeassistant.config_entries import ConfigEntry
+    from homeassistant.core import HomeAssistant
+from homeassistant.const import EntityCategory
+
+if TYPE_CHECKING:
+    from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
 from .const import DOMAIN, KEY_COORDINATOR_SWITCH_INFOS, KEY_SWITCH
 from .netgear_entities import NetgearRouterSensorEntity, NetgearSensorEntityDescription
-from .netgear_switch import HomeAssistantNetgearSwitch
+
+if TYPE_CHECKING:
+    from .netgear_switch import HomeAssistantNetgearSwitch
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -90,35 +92,30 @@ PORT_TEMPLATE = OrderedDict(
         "port_{port}_traffic_rx_mbytes": {
             "name": "Port {port} Traffic Received",
             "native_unit_of_measurement": UnitOfInformation.MEGABYTES,
-            # 'unit_of_measurement': UnitOfInformation.GIGABYTES,
             "device_class": SensorDeviceClass.DATA_SIZE,
             "icon": "mdi:download",
         },
         "port_{port}_traffic_tx_mbytes": {
             "name": "Port {port} Traffic Transferred",
             "native_unit_of_measurement": UnitOfInformation.MEGABYTES,
-            # 'unit_of_measurement': UnitOfInformation.GIGABYTES,
             "device_class": SensorDeviceClass.DATA_SIZE,
             "icon": "mdi:upload",
         },
         "port_{port}_speed_rx_mbytes": {
             "name": "Port {port} Receiving",
             "native_unit_of_measurement": UnitOfDataRate.MEGABYTES_PER_SECOND,
-            # 'unit_of_measurement': UnitOfInformation.GIGABYTES,
             "device_class": SensorDeviceClass.DATA_RATE,
             "icon": "mdi:download",
         },
         "port_{port}_speed_tx_mbytes": {
             "name": "Port {port} Transferring",
             "native_unit_of_measurement": UnitOfDataRate.MEGABYTES_PER_SECOND,
-            # 'unit_of_measurement': UnitOfInformation.GIGABYTES,
             "device_class": SensorDeviceClass.DATA_RATE,
             "icon": "mdi:upload",
         },
         "port_{port}_speed_io_mbytes": {
             "name": "Port {port} IO",
             "native_unit_of_measurement": UnitOfDataRate.MEGABYTES_PER_SECOND,
-            # 'unit_of_measurement': UnitOfInformation.GIGABYTES,
             "device_class": SensorDeviceClass.DATA_RATE,
             "icon": "mdi:swap-vertical",
         },
@@ -136,12 +133,6 @@ PORT_TEMPLATE = OrderedDict(
             "device_class": SensorDeviceClass.DATA_SIZE,
             "icon": "mdi:upload",
         },
-        # "port_{port}_status": {
-        #    "name": "Port {port} Status",
-        #    # "native_unit_of_measurement": BinarySensorDeviceClass.CONNECTIVITY,
-        #    "device_class": BinarySensorDeviceClass.CONNECTIVITY,
-        #    #'icon': "mdi:upload"
-        # },
         "port_{port}_connection_speed": {
             "name": "Port {port} Connection Speed",
             "native_unit_of_measurement": UnitOfDataRate.MEGABYTES_PER_SECOND,
@@ -208,9 +199,14 @@ async def async_setup_entry(
         )
         switch_entities.append(descr_entity)
 
+    if gs_switch.api is None:
+        _LOGGER.error("gs_switch.api is None, cannot proceed with setting up sensors.")
+        return
+
     ports_cnt = gs_switch.api.ports
     _LOGGER.info(
-        f"[sensor.async_setup_entry] setting up Platform.SENSOR for {ports_cnt} Switch Ports"
+        "[sensor.async_setup_entry] setting up Platform.SENSOR for %d Switch Ports",
+        ports_cnt,
     )
 
     entity_descriptions_kwargs = []
@@ -253,7 +249,6 @@ async def async_setup_entry(
                     }
                 )
 
-
     # Adding aggregated sensors
     for sensor_key, sensor_data in AGGREGATED_SENSORS.items():
         entity_descriptions_kwargs.append(
@@ -266,7 +261,7 @@ async def async_setup_entry(
                 "icon": sensor_data.get("icon"),
             }
         )
-    
+
     for description_kwargs in entity_descriptions_kwargs:
         description = NetgearSensorEntityDescription(**description_kwargs)
         port_sensor_entity = NetgearRouterSensorEntity(
@@ -278,4 +273,4 @@ async def async_setup_entry(
 
     async_add_entities(switch_entities)
     # commented next line, why was it there???
-    # coordinator_switch_infos.data = True
+    # coordinator_switch_infos.data is(=) True
