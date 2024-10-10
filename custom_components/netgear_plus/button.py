@@ -31,24 +31,25 @@ async def async_setup_entry(
         const.KEY_COORDINATOR_SWITCH_INFOS
     ]
 
-    _LOGGER.info(
-        "[button.async_setup_entry] setting up Platform.BUTTON for %s Switch Ports",
-        gs_switch.api.poe_ports,
-    )
+    if gs_switch.api and gs_switch.api.poe_ports:
+        _LOGGER.info(
+            "[button.async_setup_entry] setting up Platform.BUTTON for %s Switch Ports",
+            gs_switch.api.poe_ports,
+        )
 
-    if gs_switch.api.poe_ports and len(gs_switch.api.poe_ports) > 0:
-        for poe_port in gs_switch.api.poe_ports:
-            switch_entity = NetgearPoEPowerCycleButtonEntity(
-                coordinator=coordinator_switch_infos,
-                hub=gs_switch,
-                entity_description=NetgearButtonEntityDescription(
-                    key=f"port_{poe_port}_poe_power_cycle",
-                    name=f"Port {poe_port} PoE Power Cycle",
-                    device_class=ButtonDeviceClass.RESTART,
-                ),
-                port_nr=poe_port,
-            )
+        if len(gs_switch.api.poe_ports) > 0:
+            for poe_port in gs_switch.api.poe_ports:
+                switch_entity = NetgearPoEPowerCycleButtonEntity(
+                    coordinator=coordinator_switch_infos,
+                    hub=gs_switch,
+                    entity_description=NetgearButtonEntityDescription(
+                        key=f"port_{poe_port}_poe_power_cycle",
+                        name=f"Port {poe_port} PoE Power Cycle",
+                        device_class=ButtonDeviceClass.RESTART,
+                    ),
+                    port_nr=poe_port,
+                )
 
-            entities.append(switch_entity)
+                entities.append(switch_entity)
 
     async_add_entities(entities)

@@ -48,7 +48,7 @@ async def async_setup_entry(
     # Router entities
     switch_entities = []
 
-    ports_cnt = gs_switch.api.ports or 0
+    ports_cnt = getattr(gs_switch.api, "ports", 0) if gs_switch.api is not None else 0
     _LOGGER.info(
         "[binary_sensor.async_setup_entry] \
 setting up Platform.BINARY_SENSOR for %d Switch Ports",
