@@ -38,6 +38,7 @@ class AutodetectedSwitchModel:
         {"method": "post", "url": "http://{ip}/status.htm"}
     ]
     POE_PORT_CONFIG_TEMPLATES: ClassVar = []
+    POE_PORT_STATUS_TEMPLATES: ClassVar = []
     LOGOUT_TEMPLATES: ClassVar = [{"method": "post", "url": "http://{ip}/logout.cgi"}]
 
     def __init__(self) -> None:
