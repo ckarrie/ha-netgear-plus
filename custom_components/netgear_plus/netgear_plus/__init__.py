@@ -580,19 +580,10 @@ Response from switch: "%s"',
         if not response_portstatistics:
             return switch_data
 
-        # init values
-        for key in [
-            "sum_port_traffic_rx",
-            "sum_port_traffic_tx",
-            "sum_port_crc_errors",
-            "sum_port_speed_rx",
-            "sum_port_speed_tx",
-        ]:
-            current_data[key] = 0
-
+        current_data = self._initialize_current_data()
         _start_time = time.perf_counter()
 
-        # Parse content
+        # Parse port statistics html
         tree_portstatistics = html.fromstring(response_portstatistics.content)
         rx1, tx1, crc1 = self._parse_port_statistics(tree=tree_portstatistics)
         io_zeros = [0] * self.ports
@@ -612,9 +603,87 @@ Response from switch: "%s"',
         switch_data.update(self._get_port_status())
 
         sample_time = _start_time - self._previous_timestamp
-        sample_factor = 1 / sample_time
         switch_data["response_time_s"] = round(sample_time, 1)
 
+        self._update_current_data(current_data, switch_data, sample_time)
+
+        switch_data.update(self._updated_switch_data(current_data))
+
+        if isinstance(self.switch_model, (models.GS3xxSeries)):
+            time.sleep(self.sleep_time)
+            switch_data.update(self._get_poe_port_status())
+
+        # set previous data
+        self._previous_timestamp = time.perf_counter()
+        self._previous_data = current_data
+
+        return switch_data
+
+    def _load_switch_infos(self) -> None:
+        if not self.switch_model:
+            self.autodetect_model()
+        page = self.fetch_page(self.switch_model.SWITCH_INFO_TEMPLATES)
+        if not page:
+            return
+        tree = html.fromstring(page.content)
+
+        if isinstance(self.switch_model, (models.GS3xxSeries)):
+            switch_serial_number = self._get_gs3xx_switch_info(tree=tree, text="ml198")
+            switch_name = tree.xpath('//div[@id="switch_name"]')[0].text
+            switch_firmware = self._get_gs3xx_switch_info(tree=tree, text="ml089")
+
+        else:
+            # switch_info.htm:
+            switch_serial_number = "unknown"
+
+            switch_name = tree.xpath('//input[@id="switch_name"]')[0].value
+
+            # Detect Firmware
+            switch_firmware = tree.xpath('//table[@id="tbl1"]/tr[6]/td[2]')[0].text
+            if switch_firmware is None:
+                # Fallback older versions
+                switch_firmware = tree.xpath('//table[@id="tbl1"]/tr[4]/td[2]')[0].text
+
+            switch_bootloader_x = tree.xpath('//td[@id="loader"]')
+            switch_serial_number_x = tree.xpath('//table[@id="tbl1"]/tr[3]/td[2]')
+            client_hash_x = tree.xpath('//input[@id="hash"]')
+
+            if switch_bootloader_x:
+                self._switch_bootloader = switch_bootloader_x[0].text
+            if switch_serial_number_x:
+                switch_serial_number = switch_serial_number_x[0].text
+
+        client_hash_x = tree.xpath('//input[@id="hash"]')
+        if client_hash_x:
+            self._client_hash = client_hash_x[0].value
+
+        # Avoid a second call on next get_switch_infos() call
+        self._loaded_switch_infos = {
+            "switch_ip": self.host,
+            "switch_name": switch_name,
+            "switch_bootloader": self._switch_bootloader,
+            "switch_firmware": switch_firmware,
+            "switch_serial_number": switch_serial_number,
+        }
+
+    def _initialize_current_data(self) -> dict:
+        """Initialize current data dictionary with default values."""
+        current_data = {}
+        for key in [
+            "sum_port_traffic_rx",
+            "sum_port_traffic_tx",
+            "sum_port_crc_errors",
+            "sum_port_speed_rx",
+            "sum_port_speed_tx",
+        ]:
+            current_data[key] = 0
+        return current_data
+
+    def _update_current_data(
+        self, current_data: dict, switch_data: dict, sample_time: float
+    ) -> None:
+        """Update current data with calculated values."""
+        sample_factor = 1 / sample_time
         for port_number0 in range(self.ports):
             try:
                 port_number = port_number0 + 1
@@ -729,17 +798,6 @@ Response from switch: "%s"',
                 f"port_{port_number}_speed_io"
             ]
 
-        switch_data.update(self._updated_switch_data(current_data))
-
-        # set previous data
-        self._previous_timestamp = time.perf_counter()
-        self._previous_data = current_data
-
-        if isinstance(self.switch_model, (models.GS3xxSeries)):
-            time.sleep(self.sleep_time)
-            switch_data.update(self._get_poe_port_status())
-        return switch_data
-
     def _updated_switch_data(self, current_data: dict) -> dict:
         switch_data = {}
         for port_number in range(1, self.ports + 1):
@@ -778,53 +836,6 @@ Response from switch: "%s"',
         ]
         switch_data["sum_port_crc_errors"] = current_data["sum_port_crc_errors"]
         return switch_data
-
-    def _load_switch_infos(self) -> None:
-        if not self.switch_model:
-            self.autodetect_model()
-        page = self.fetch_page(self.switch_model.SWITCH_INFO_TEMPLATES)
-        if not page:
-            return
-        tree = html.fromstring(page.content)
-
-        if isinstance(self.switch_model, (models.GS3xxSeries)):
-            switch_serial_number = self._get_gs3xx_switch_info(tree=tree, text="ml198")
-            switch_name = tree.xpath('//div[@id="switch_name"]')[0].text
-            switch_firmware = self._get_gs3xx_switch_info(tree=tree, text="ml089")
-
-        else:
-            # switch_info.htm:
-            switch_serial_number = "unknown"
-
-            switch_name = tree.xpath('//input[@id="switch_name"]')[0].value
-
-            # Detect Firmware
-            switch_firmware = tree.xpath('//table[@id="tbl1"]/tr[6]/td[2]')[0].text
-            if switch_firmware is None:
-                # Fallback older versions
-                switch_firmware = tree.xpath('//table[@id="tbl1"]/tr[4]/td[2]')[0].text
-
-            switch_bootloader_x = tree.xpath('//td[@id="loader"]')
-            switch_serial_number_x = tree.xpath('//table[@id="tbl1"]/tr[3]/td[2]')
-            client_hash_x = tree.xpath('//input[@id="hash"]')
-
-            if switch_bootloader_x:
-                self._switch_bootloader = switch_bootloader_x[0].text
-            if switch_serial_number_x:
-                switch_serial_number = switch_serial_number_x[0].text
-
-        client_hash_x = tree.xpath('//input[@id="hash"]')
-        if client_hash_x:
-            self._client_hash = client_hash_x[0].value
-
-        # Avoid a second call on next get_switch_infos() call
-        self._loaded_switch_infos = {
-            "switch_ip": self.host,
-            "switch_name": switch_name,
-            "switch_bootloader": self._switch_bootloader,
-            "switch_firmware": switch_firmware,
-            "switch_serial_number": switch_serial_number,
-        }
 
     def _get_poe_port_status(self) -> dict:
         switch_data = {}
