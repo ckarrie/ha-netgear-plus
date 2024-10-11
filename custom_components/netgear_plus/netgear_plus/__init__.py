@@ -19,7 +19,7 @@ API_V2_CHECKS = {
 }
 
 
-def _reduce_digits(v: float) -> float:
+def _from_bytes_to_megabytes(v: float) -> float:
     bytes_to_mbytes = 1e-6
     return float(f"{round(v * bytes_to_mbytes, 2):.2f}")
 
@@ -152,10 +152,10 @@ passed_checks_by_model=%s matched_models=%s",
         self.ports = switch_model.PORTS
         self.poe_ports = switch_model.POE_PORTS
         self._previous_data = {
-            "tx": [0] * self.ports,
-            "rx": [0] * self.ports,
-            "crc": [0] * self.ports,
-            "io": [0] * self.ports,
+            "traffic_tx": [0] * self.ports,
+            "traffic_rx": [0] * self.ports,
+            "crc_errors": [0] * self.ports,
+            "speed_io": [0] * self.ports,
         }
 
     def check_login_url(self) -> bool:
@@ -560,6 +560,9 @@ Response from switch: "%s"',
 
     def get_switch_infos(self) -> dict:
         """Return dict with all available statistics."""
+        if not self.switch_model.MODEL_NAME:
+            self.autodetect_model()
+
         current_data = {}
         switch_data = {}
 
@@ -581,9 +584,9 @@ Response from switch: "%s"',
         for key in [
             "sum_port_traffic_rx",
             "sum_port_traffic_tx",
-            "sum_port_traffic_crc_err",
-            "sum_port_speed_bps_rx",
-            "sum_port_speed_bps_tx",
+            "sum_port_crc_errors",
+            "sum_port_speed_rx",
+            "sum_port_speed_tx",
         ]:
             current_data[key] = 0
 
@@ -593,7 +596,16 @@ Response from switch: "%s"',
         tree_portstatistics = html.fromstring(response_portstatistics.content)
         rx1, tx1, crc1 = self._parse_port_statistics(tree=tree_portstatistics)
         io_zeros = [0] * self.ports
-        current_data.update({"rx": rx1, "tx": tx1, "crc": crc1, "io": io_zeros})
+        current_data.update(
+            {
+                "traffic_rx": rx1,
+                "traffic_tx": tx1,
+                "sum_rx": rx1,
+                "sum_tx": tx1,
+                "crc_errors": crc1,
+                "speed_io": io_zeros,
+            }
+        )
 
         # Fetch Port Status
         time.sleep(self.sleep_time)
@@ -607,17 +619,23 @@ Response from switch: "%s"',
             try:
                 port_number = port_number0 + 1
                 current_data[f"port_{port_number}_traffic_rx"] = (
-                    current_data["rx"][port_number0]
-                    - self._previous_data["rx"][port_number0]
+                    current_data["traffic_rx"][port_number0]
+                    - self._previous_data["traffic_rx"][port_number0]
                 )
                 current_data[f"port_{port_number}_traffic_tx"] = (
-                    current_data["tx"][port_number0]
-                    - self._previous_data["tx"][port_number0]
+                    current_data["traffic_tx"][port_number0]
+                    - self._previous_data["traffic_tx"][port_number0]
                 )
                 current_data[f"port_{port_number}_crc_errors"] = (
-                    current_data["crc"][port_number0]
-                    - self._previous_data["crc"][port_number0]
+                    current_data["crc_errors"][port_number0]
+                    - self._previous_data["crc_errors"][port_number0]
                 )
+                current_data[f"port_{port_number}_sum_rx"] = current_data["sum_rx"][
+                    port_number0
+                ]
+                current_data[f"port_{port_number}_sum_tx"] = current_data["sum_tx"][
+                    port_number0
+                ]
                 current_data[f"port_{port_number}_speed_rx"] = int(
                     current_data[f"port_{port_number}_traffic_rx"] * sample_factor
                 )
@@ -628,80 +646,45 @@ Response from switch: "%s"',
                     current_data[f"port_{port_number}_speed_rx"]
                     + current_data[f"port_{port_number}_speed_tx"]
                 )
-                current_data[f"port_{port_number}_sum_rx"] = current_data["rx"][
-                    port_number0
-                ]
-                current_data[f"port_{port_number}_sum_tx"] = current_data["tx"][
-                    port_number0
-                ]
+
             except IndexError:
                 _LOGGER.debug("IndexError at port_number0=%s", port_number0)
                 continue
 
             # Lowpass-Filter
-            current_data[f"port_{port_number}_traffic_rx"] = max(
-                current_data[f"port_{port_number}_traffic_rx"], 0
-            )
-            current_data[f"port_{port_number}_traffic_tx"] = max(
-                current_data[f"port_{port_number}_traffic_tx"], 0
-            )
-            current_data[f"port_{port_number}_crc_errors"] = max(
-                current_data[f"port_{port_number}_crc_errors"], 0
-            )
-            current_data[f"port_{port_number}_speed_rx"] = max(
-                current_data[f"port_{port_number}_speed_rx"], 0
-            )
-            current_data[f"port_{port_number}_speed_tx"] = max(
-                current_data[f"port_{port_number}_speed_tx"], 0
-            )
-            current_data[f"port_{port_number}_speed_io"] = max(
-                current_data[f"port_{port_number}_speed_io"], 0
-            )
+            keys = [
+                "traffic_rx",
+                "traffic_tx",
+                "crc_errors",
+                "speed_rx",
+                "speed_tx",
+                "speed_io",
+            ]
+            for key in keys:
+                current_data[f"port_{port_number}_{key}"] = max(
+                    current_data[f"port_{port_number}_{key}"], 0
+                )
 
             # Access old data if value is 0
             port_status_is_connected = (
-                switch_data.get(f"port_{port_number}_status", "off") == "on"
+                switch_data.get(f"port_{port_number}_status") == "on"
             )
             if port_status_is_connected:
-                if current_data[f"port_{port_number}_sum_rx"] <= 0:
-                    current_data[f"port_{port_number}_sum_rx"] = self._previous_data[
-                        "rx"
-                    ][port_number0]
-                    current_data["rx"][port_number0] = current_data[
-                        f"port_{port_number}_sum_rx"
-                    ]
-                    _LOGGER.info(
-                        "Fallback to previous data: port_nr=%s port_sum_rx=%s",
-                        port_number,
-                        current_data[f"port_{port_number}_sum_rx"],
-                    )
-                if current_data[f"port_{port_number}_sum_tx"] <= 0:
-                    current_data[f"port_{port_number}_sum_tx"] = self._previous_data[
-                        "tx"
-                    ][port_number0]
-                    current_data["tx"][port_number0] = current_data[
-                        f"port_{port_number}_sum_tx"
-                    ]
-                    _LOGGER.info(
+                keys = ["sum_rx", "sum_tx", "speed_io"]
+                for key in keys:
+                    if current_data[f"port_{port_number}_{key}"] <= 0:
+                        current_data[f"port_{port_number}_{key}"] = self._previous_data[
+                            key
+                        ][port_number0]
+                        current_data[key][port_number0] = current_data[
+                            f"port_{port_number}_{key}"
+                        ]
                         _LOGGER.info(
-                            "Fallback to previous data: port_nr=%s port_sum_tx=%s",
+                            "Fallback to previous data: port_nr=%s port_%s=%s",
                             port_number,
-                            current_data[f"port_{port_number}_sum_tx"],
+                            key,
+                            current_data[f"port_{port_number}_{key}"],
                         )
-                    )
-                if current_data[f"port_{port_number}_speed_io"] <= 0:
-                    current_data[f"port_{port_number}_speed_io"] = self._previous_data[
-                        "io"
-                    ][port_number0]
-                    current_data["io"][port_number0] = current_data[
-                        f"port_{port_number}_speed_io"
-                    ]
-                    _LOGGER.info(
-                        "Fallback to previous data: \
-port_nr=%s port_speed_bps_io=%s",
-                        port_number,
-                        current_data[f"port_{port_number}_speed_io"],
-                    )
 
             # Highpass-Filter (max 1e9 B/s = 1GB/s per port)
             hp_max_traffic = 1e9 * sample_time
@@ -725,81 +708,75 @@ port_nr=%s port_speed_bps_io=%s",
                 current_data[f"port_{port_number}_speed_tx"], hp_max_speed
             )
 
-            current_data["sum_port_traffic_rx"] += current_data[
-                f"port_{port_number}_traffic_rx"
-            ]
-            current_data["sum_port_traffic_tx"] += current_data[
-                f"port_{port_number}_traffic_tx"
-            ]
-            current_data["sum_port_traffic_crc_err"] += current_data[
-                f"port_{port_number}_crc_errors"
-            ]
-            current_data["sum_port_speed_bps_rx"] += current_data[
-                f"port_{port_number}_speed_rx"
-            ]
-            current_data["sum_port_speed_bps_tx"] += current_data[
-                f"port_{port_number}_speed_tx"
-            ]
-            sum_port_speed_bps_io = (
-                current_data["sum_port_speed_bps_rx"]
-                + current_data["sum_port_speed_bps_tx"]
+            # Sum up all metrics in key dict
+            for key in [
+                "traffic_rx",
+                "traffic_tx",
+                "crc_errors",
+                "speed_rx",
+                "speed_tx",
+            ]:
+                current_data[f"sum_port_{key}"] += current_data[
+                    f"port_{port_number}_{key}"
+                ]
+
+            current_data["sum_port_speed_io"] = (
+                current_data["sum_port_speed_rx"] + current_data["sum_port_speed_tx"]
             )
 
             # set for later (previous data)
-            current_data["io"][port_number0] = current_data[
+            current_data["speed_io"][port_number0] = current_data[
                 f"port_{port_number}_speed_io"
             ]
 
-            switch_data[f"port_{port_number}_traffic_rx_mbytes"] = _reduce_digits(
-                current_data[f"port_{port_number}_traffic_rx"]
-            )
-            switch_data[f"port_{port_number}_traffic_tx_mbytes"] = _reduce_digits(
-                current_data[f"port_{port_number}_traffic_tx"]
-            )
-            switch_data[f"port_{port_number}_speed_rx_mbytes"] = _reduce_digits(
-                current_data[f"port_{port_number}_speed_rx"]
-            )
-            switch_data[f"port_{port_number}_speed_tx_mbytes"] = _reduce_digits(
-                current_data[f"port_{port_number}_speed_tx"]
-            )
-            switch_data[f"port_{port_number}_speed_io_mbytes"] = _reduce_digits(
-                current_data[f"port_{port_number}_speed_io"]
-            )
-            switch_data[f"port_{port_number}_crc_errors"] = current_data[
-                f"port_{port_number}_crc_errors"
-            ]
-            switch_data[f"port_{port_number}_sum_rx_mbytes"] = _reduce_digits(
-                current_data[f"port_{port_number}_sum_rx"]
-            )
-            switch_data[f"port_{port_number}_sum_tx_mbytes"] = _reduce_digits(
-                current_data[f"port_{port_number}_sum_tx"]
-            )
-
-        switch_data["sum_port_traffic_rx"] = _reduce_digits(
-            current_data["sum_port_traffic_rx"]
-        )
-        switch_data["sum_port_traffic_tx"] = _reduce_digits(
-            current_data["sum_port_traffic_tx"]
-        )
-        switch_data["sum_port_traffic_crc_err"] = current_data[
-            "sum_port_traffic_crc_err"
-        ]
-        switch_data["sum_port_speed_bps_rx"] = current_data["sum_port_speed_bps_rx"]
-        switch_data["sum_port_speed_bps_tx"] = current_data["sum_port_speed_bps_tx"]
-        switch_data["sum_port_speed_bps_io"] = _reduce_digits(sum_port_speed_bps_io)
+        switch_data.update(self._updated_switch_data(current_data))
 
         # set previous data
         self._previous_timestamp = time.perf_counter()
-        self._previous_data = {
-            "rx": current_data["rx"],
-            "tx": current_data["tx"],
-            "crc": current_data["crc"],
-            "io": current_data["io"],
-        }
+        self._previous_data = current_data
 
         if isinstance(self.switch_model, (models.GS3xxSeries)):
             time.sleep(self.sleep_time)
             switch_data.update(self._get_poe_port_status())
+        return switch_data
+
+    def _updated_switch_data(self, current_data: dict) -> dict:
+        switch_data = {}
+        for port_number in range(1, self.ports + 1):
+            keys = [
+                "traffic_rx",
+                "traffic_tx",
+                "speed_rx",
+                "speed_tx",
+                "speed_io",
+                "sum_rx",
+                "sum_tx",
+            ]
+            for key in keys:
+                switch_data[f"port_{port_number}_{key}_mbytes"] = (
+                    _from_bytes_to_megabytes(current_data[f"port_{port_number}_{key}"])
+                )
+
+        switch_data["sum_port_traffic_rx"] = _from_bytes_to_megabytes(
+            current_data["sum_port_traffic_rx"]
+        )
+        switch_data["sum_port_traffic_tx"] = _from_bytes_to_megabytes(
+            current_data["sum_port_traffic_tx"]
+        )
+        switch_data["sum_port_speed_rx"] = _from_bytes_to_megabytes(
+            current_data["sum_port_speed_rx"]
+        )
+        switch_data["sum_port_speed_tx"] = _from_bytes_to_megabytes(
+            current_data["sum_port_speed_tx"]
+        )
+        switch_data["sum_port_speed_io"] = _from_bytes_to_megabytes(
+            current_data["sum_port_speed_io"]
+        )
+
+        switch_data[f"port_{port_number}_crc_errors"] = current_data[
+            f"port_{port_number}_crc_errors"
+        ]
+        switch_data["sum_port_crc_errors"] = current_data["sum_port_crc_errors"]
         return switch_data
 
     def _load_switch_infos(self) -> None:

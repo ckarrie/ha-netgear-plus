@@ -155,7 +155,7 @@ POE_STATUS_TEMPLATE = OrderedDict(
 
 AGGREGATED_SENSORS = OrderedDict(
     {
-        "sum_port_speed_bps_io": {
+        "sum_port_speed_io": {
             "name": "Switch IO",
             "native_unit_of_measurement": UnitOfDataRate.MEGABYTES_PER_SECOND,
             "device_class": SensorDeviceClass.DATA_RATE,
