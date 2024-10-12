@@ -96,7 +96,7 @@ PORT_TEMPLATE = OrderedDict(
             "icon": "mdi:download",
         },
         "port_{port}_traffic_tx_mbytes": {
-            "name": "Port {port} Traffic Transferred",
+            "name": "Port {port} Traffic Sent",
             "native_unit_of_measurement": UnitOfInformation.MEGABYTES,
             "device_class": SensorDeviceClass.DATA_SIZE,
             "icon": "mdi:upload",
@@ -108,7 +108,7 @@ PORT_TEMPLATE = OrderedDict(
             "icon": "mdi:download",
         },
         "port_{port}_speed_tx_mbytes": {
-            "name": "Port {port} Transferring",
+            "name": "Port {port} Sending",
             "native_unit_of_measurement": UnitOfDataRate.MEGABYTES_PER_SECOND,
             "device_class": SensorDeviceClass.DATA_RATE,
             "icon": "mdi:upload",
@@ -127,14 +127,14 @@ PORT_TEMPLATE = OrderedDict(
             "icon": "mdi:download",
         },
         "port_{port}_sum_tx_mbytes": {
-            "name": "Port {port} Total Transferred",
+            "name": "Port {port} Total Sent",
             "native_unit_of_measurement": UnitOfInformation.MEGABYTES,
             "unit_of_measurement": UnitOfInformation.GIGABYTES,
             "device_class": SensorDeviceClass.DATA_SIZE,
             "icon": "mdi:upload",
         },
         "port_{port}_connection_speed": {
-            "name": "Port {port} Connection Speed",
+            "name": "Port {port} Link Speed",
             "native_unit_of_measurement": UnitOfDataRate.MEGABYTES_PER_SECOND,
             "device_class": SensorDeviceClass.DATA_RATE,
             #'icon': "mdi:upload"
@@ -168,7 +168,7 @@ AGGREGATED_SENSORS = OrderedDict(
             "icon": "mdi:download",
         },
         "sum_port_traffic_tx": {
-            "name": "Switch Traffic Transferred",
+            "name": "Switch Traffic Sent",
             "native_unit_of_measurement": UnitOfInformation.MEGABYTES,
             "device_class": SensorDeviceClass.DATA_SIZE,
             "icon": "mdi:upload",
