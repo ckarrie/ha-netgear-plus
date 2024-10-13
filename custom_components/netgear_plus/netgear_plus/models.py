@@ -11,6 +11,19 @@ class AutodetectedSwitchModel:
     POE_SCHEDULING = False
     CHECKS_AND_RESULTS = []
 
+    AUTODETECT_TEMPLATES = [
+        { "method": "get",
+          "url": "http://{ip}/login.cgi" },
+        { "method": "get",
+          "url": "http://{ip}/login.htm" },
+        { "method": "get",
+          "url": "http://{ip}/" },
+    ]
+
+    LOGIN_TEMPLATE = { "method": "post",
+                       "url": "http://{ip}/login.cgi",
+                        "key": "password" }
+
     SWITCH_INFO_TEMPLATES = [
         { "method": "get",
           "url": "http://{ip}/switch_info.htm" },
@@ -32,7 +45,6 @@ class AutodetectedSwitchModel:
         { "method": "post",
           "url": "http://{ip}/logout.cgi" }
     ]
-
 
 
     def __init__(self) -> None:
@@ -143,6 +155,10 @@ class GS316EP(GS3xxSeries):
         ("check_login_form_rand", [True]),
         ("check_login_title_tag", ["GS316EP"]),
     ]
+    LOGIN_TEMPLATE = { "method": "post",
+                       "url": "http://{ip}/homepage.html",
+                       "key": "LoginPassword" }
+    ALLOWED_COOKIE_TYPES = ["gambitCookie"]
 
 
 class GS316EPP(GS316EP):
@@ -152,7 +168,6 @@ class GS316EPP(GS316EP):
         ("check_login_form_rand", [True]),
         ("check_login_title_tag", ["GS316EPP"]),
     ]
-
 
 
 MODELS = [

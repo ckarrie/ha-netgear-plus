@@ -24,6 +24,9 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
     ]
 
     if gs_switch.api.poe_ports and len(gs_switch.api.poe_ports) > 0:
+
+        _LOGGER.info(f"[switch.async_setup_entry] setting up Platform.SWITCH for {gs_switch.api.poe_ports} Switch Ports")
+        
         for poe_port in gs_switch.api.poe_ports:
             # poe_port_power_status = port_{poe_port_nr}_poe_power
             switch_entity = NetgearPOESwitchEntity(

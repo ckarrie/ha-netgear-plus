@@ -78,7 +78,7 @@ class HomeAssistantNetgearSwitch:
             return await self.hass.async_add_executor_job(self.api.get_switch_infos)
 
 
-class NetgearAPICoordinatorEntity(CoordinatorEntity):
+class NetgearCoordinatorEntity(CoordinatorEntity):
     """Base class for a Netgear router entity."""
 
     def __init__(
@@ -90,15 +90,10 @@ class NetgearAPICoordinatorEntity(CoordinatorEntity):
         self._name = switch.device_name
         self._unique_id = switch.unique_id
 
-    @abstractmethod
-    @callback
-    def async_update_device(self) -> None:
-        """Update the Netgear device."""
 
     @callback
     def _handle_coordinator_update(self) -> None:
         """Handle updated data from the coordinator."""
-        self.async_update_device()
         super()._handle_coordinator_update()
 
     @property
@@ -119,28 +114,22 @@ class NetgearAPICoordinatorEntity(CoordinatorEntity):
         )
 
 
-class HAGS108SwitchEntity(Entity):
-    """Base class for a Netgear router entity without coordinator."""
+class NetgearAPICoordinatorEntity(NetgearCoordinatorEntity):
+    """Base class for a Netgear router entity."""
 
-    def __init__(self, switch: HomeAssistantNetgearSwitch) -> None:
+    def __init__(
+        self, coordinator: DataUpdateCoordinator, switch: HomeAssistantNetgearSwitch
+    ) -> None:
         """Initialize a Netgear device."""
-        self._switch = switch
-        self._name = switch.device_name
-        self._unique_id = switch.unique_id
+        super().__init__(coordinator, switch)
 
-    @property
-    def unique_id(self) -> str:
-        """Return a unique ID."""
-        return self._unique_id
-
-    @property
-    def name(self) -> str:
-        """Return the name."""
-        return self._name
-
-    @property
-    def device_info(self) -> DeviceInfo:
-        """Return the device information."""
-        return DeviceInfo(
-            identifiers={(DOMAIN, self._switch.unique_id)},
-        )
+    @abstractmethod
+    @callback
+    def async_update_device(self) -> None:
+        """Update the Netgear device."""
+    
+    @callback
+    def _handle_coordinator_update(self) -> None:
+        """Handle updated data from the coordinator."""
+        self.async_update_device()
+        super()._handle_coordinator_update()
