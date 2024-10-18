@@ -9,7 +9,6 @@
         }
       }
     },
-    "timeout": "Timeout to server, please try again in few minutes",
     "error": {
       "config": "Connection or login error: please check your configuration"
     },

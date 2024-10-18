@@ -1,7 +1,7 @@
 {
   "domain": "netgear_plus",
   "name": "NETGEAR Plus",
-  "codeowners": [ "ckarrie", "foxey"],
+  "codeowners": [ "@ckarrie", "@foxey"],
   "config_flow": true,
   "documentation": "https://github.com/ckarrie/ha-netgear-plus/blob/main/README.md",
   "iot_class": "local_polling",
