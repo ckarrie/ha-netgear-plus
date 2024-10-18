@@ -3,37 +3,41 @@
 from __future__ import annotations
 
 import logging
-from typing import Any, cast
+from typing import TYPE_CHECKING, Any, cast
 from urllib.parse import urlparse
 
 import requests
 import voluptuous as vol
-
 from homeassistant import config_entries
+
+if TYPE_CHECKING:
+    from homeassistant.components import ssdp
 from homeassistant.const import CONF_HOST, CONF_PASSWORD, CONF_TIMEOUT
 from homeassistant.core import callback
-from homeassistant.data_entry_flow import FlowResult
 from homeassistant.util.network import is_ipv4_address
 
-from .const import DEFAULT_CONF_TIMEOUT, DEFAULT_HOST, DEFAULT_NAME, DOMAIN
-from .errors import CannotLoginException
+if TYPE_CHECKING:
+    from homeassistant.config_entries import ConfigFlowResult
+
+from .const import DEFAULT_CONF_TIMEOUT, DEFAULT_HOST, DOMAIN
+from .errors import CannotLoginError
 from .netgear_switch import get_api
 
 _LOGGER = logging.getLogger(__name__)
 
 
-def _discovery_schema_with_defaults(discovery_info):
+def _discovery_schema_with_defaults(discovery_info: dict[str, Any]) -> vol.Schema:
     return vol.Schema(_ordered_shared_schema(discovery_info))
 
 
-def _user_schema_with_defaults(user_input):
+def _user_schema_with_defaults(user_input: dict[str, Any]) -> vol.Schema:
     user_schema = {vol.Required(CONF_HOST, default=user_input.get(CONF_HOST, "")): str}
     user_schema.update(_ordered_shared_schema(user_input))
 
     return vol.Schema(user_schema)
 
 
-def _ordered_shared_schema(schema_input):
+def _ordered_shared_schema(schema_input: dict[str, Any]) -> dict[vol.Required, type]:
     return {
         vol.Required(CONF_PASSWORD, default=schema_input.get(CONF_PASSWORD, "")): str,
     }
@@ -46,7 +50,10 @@ class OptionsFlowHandler(config_entries.OptionsFlow):
         """Init object."""
         self.config_entry = config_entry
 
-    async def async_step_init(self, user_input=None):
+    async def async_step_init(
+        self, user_input: dict[str, Any] | None = None
+    ) -> ConfigFlowResult:
+        """Manage the options."""
         """Manage the options."""
         if user_input is not None:
             return self.async_create_entry(title="", data=user_input)
@@ -70,7 +77,7 @@ class NetgearFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
 
     VERSION = 1
 
-    def __init__(self):
+    def __init__(self) -> None:
         """Initialize the netgear config flow."""
         self.placeholders = {
             CONF_HOST: DEFAULT_HOST,
@@ -111,6 +118,7 @@ class NetgearFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
     ) -> ConfigFlowResult:
         """Initialize flow from ssdp."""
         updated_data: dict[str, str | int | bool] = {}
+        errors: dict[str, str] = {}
 
         device_url = urlparse(discovery_info.ssdp_location)
         if hostname := device_url.hostname:
@@ -124,7 +132,10 @@ class NetgearFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
 
         # Open connection to get unique id
         try:
-            api = await self.hass.async_add_executor_job(get_api, updated_data[CONF_HOST])
+            api = await self.hass.async_add_executor_job(
+                get_api,
+                updated_data[CONF_HOST],  # type: ignore[arg-type]
+            )
         except requests.exceptions.ConnectTimeout:
             errors["base"] = "timeout"
         except NotImplementedError:
@@ -134,12 +145,14 @@ class NetgearFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
         await self.async_set_unique_id(unique_id)
         self._abort_if_unique_id_configured(updates=updated_data)
 
-        self.placeholders.update(updated_data)
+        self.placeholders.update(updated_data)  # type: ignore[arg-type]
         self.discovered = True
 
         return await self.async_step_user()
 
-    async def async_step_user(self, user_input=None):
+    async def async_step_user(
+        self, user_input: dict[str, Any] | None = None
+    ) -> ConfigFlowResult:
         """Handle a flow initiated by the user."""
         errors = {}
 
@@ -152,7 +165,7 @@ class NetgearFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
         # Open connection and check authentication
         try:
             api = await self.hass.async_add_executor_job(get_api, host, password)
-        except CannotLoginException:
+        except CannotLoginError:
             errors["base"] = "config"
         except requests.exceptions.ConnectTimeout:
             errors["base"] = "timeout"

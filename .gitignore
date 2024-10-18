@@ -1,5 +1,22 @@
+# artifacts
 havenv/
 .idea/
+__pycache__
+.pytest*
 *.pyc
-__pycache__/
+*.egg-info
+*/build/*
+*/dist/*
 custom_components/netgear_plus/secrets.py
+
+
+# misc
+.coverage
+#.vscode
+coverage.xml
+.ruff_cache
+
+
+# Home Assistant configuration
+config/*
+!config/configuration.yaml
