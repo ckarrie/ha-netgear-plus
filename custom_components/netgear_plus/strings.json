@@ -4,11 +4,12 @@
       "user": {
         "description": "Default host: {host}",
         "data": {
-          "host": "[%key:common::config_flow::data::host%] (Optional)",
+          "host": "[%key:common::config_flow::data::host%]",
           "password": "[%key:common::config_flow::data::password%]"
         }
       }
     },
+    "timeout": "Timeout to server, please try again in few minutes",
     "error": {
       "config": "Connection or login error: please check your configuration"
     },

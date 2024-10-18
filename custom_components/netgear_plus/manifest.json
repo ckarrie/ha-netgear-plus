@@ -1,10 +1,11 @@
 {
   "domain": "netgear_plus",
   "name": "NETGEAR Plus",
-  "documentation": "https://github.com/ckarrie/ha-netgear-plus/blob/main/README.md",
+  "codeowners": [ "ckarrie", "foxey"],
   "config_flow": true,
+  "documentation": "https://github.com/ckarrie/ha-netgear-plus/blob/main/README.md",
   "iot_class": "local_polling",
-  "codeowners": [],
+  "issue_tracker": "https://github.com/ckarrie/ha-netgear-plus/issues",
   "requirements": ["lxml>=4.6.1"],
   "ssdp": [
     {
