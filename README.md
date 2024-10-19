@@ -1,17 +1,20 @@
 # Home Assistant NETGEAR Plus Switches Integration
 
 ## What it does
+
 Grabs statistical network data from [supported NETGEAR Switches](#supported-and-tested-netgear-modelsproducts-and-firmwares) from the
 [Plus Managed Network Switch](https://www.netgear.com/business/wired/switches/plus/) line. These switches can only be managed using a
 Web interface and not through SNMP or cli. This integration uses web scraping to collect the switch configuration, statistics and
 some basic configuration updates.
 
 ## How it works
+
 1. Detecting Switch Model/Product in login.cgi
 2. Connects to the Switch and asks for a cookie (`http://IP_OF_SWITCH/login.cgi`)
 3. HTTP-Request send to the Switch twice (`http://IP_OF_SWITCH/portStatistics.cgi`) and compared with previous data ("in response time")
 
 ## Which entities
+
 - overall Switch statistics as attributes
   - Diagnostic Sensor: `switch_ip` - IP of the Switch
   - Diagnostic Sensor: `response_time_s` - Response time of two requests send to the Switch to calculate the traffic speed
@@ -27,39 +30,48 @@ some basic configuration updates.
 
 ### List of port sensors
 
-| Sensor Name                      | Platform      | mapped key from `get_switch_infos()`    | Unit                                 |
-|----------------------------------|---------------|-----------------------------------------|--------------------------------------|
-| Port {port} Traffic Received     | SENSOR        | `port_{port}_traffic_rx_mbytes`         | MB (in response time)                |
-| Port {port} Traffic Transferred  | SENSOR        | `port_{port}_traffic_tx_mbytes`         | MB (in response time)                |
-| Port {port} Receiving            | SENSOR        | `port_{port}_speed_rx_mbytes`           | MB/s                                 |
-| Port {port} Transferring         | SENSOR        | `port_{port}_speed_tx_mbytes`           | MB/s                                 |
-| Port {port} IO                   | SENSOR        | `port_{port}_speed_io_mbytes`           | MB/s                                 |
-| Port {port} Total Received       | SENSOR        | `port_{port}_sum_rx_mbytes`             | MB (since last switch reboot/reset)  |
-| Port {port} Total Transferred    | SENSOR        | `port_{port}_sum_tx_mbytes`             | MB (since last switch reboot/reset)  |
-| Port {port} Connection Speed     | SENSOR        | `port_{port}_connection_speed`          | MB/s                                 |
-| Port {port} Status               | BINARY_SENSOR | `port_{port}_status`                    | "on"/"off"                           |
-| Port {poe_port} POE Power        | SWITCH        | `port_{poe_port}_poe_power_active`      | "on"/"off"                           |
+| Sensor Name                     | Platform      | mapped key from `get_switch_infos()` | Unit                                |
+| ------------------------------- | ------------- | ------------------------------------ | ----------------------------------- |
+| Port {port} Traffic Received    | SENSOR        | `port_{port}_traffic_rx_mbytes`      | MB (in response time)               |
+| Port {port} Traffic Transferred | SENSOR        | `port_{port}_traffic_tx_mbytes`      | MB (in response time)               |
+| Port {port} Receiving           | SENSOR        | `port_{port}_speed_rx_mbytes`        | MB/s                                |
+| Port {port} Transferring        | SENSOR        | `port_{port}_speed_tx_mbytes`        | MB/s                                |
+| Port {port} IO                  | SENSOR        | `port_{port}_speed_io_mbytes`        | MB/s                                |
+| Port {port} Total Received      | SENSOR        | `port_{port}_sum_rx_mbytes`          | MB (since last switch reboot/reset) |
+| Port {port} Total Transferred   | SENSOR        | `port_{port}_sum_tx_mbytes`          | MB (since last switch reboot/reset) |
+| Port {port} Connection Speed    | SENSOR        | `port_{port}_connection_speed`       | MB/s                                |
+| Port {port} Status              | BINARY_SENSOR | `port_{port}_status`                 | "on"/"off"                          |
+| Port {poe_port} POE Power       | SWITCH        | `port_{poe_port}_poe_power_active`   | "on"/"off"                          |
 
 ### List of aggregated sensors
 
-| Sensor Name                      | Platform      | mapped key from `get_switch_infos()`    | Unit                                 |
-|----------------------------------|---------------|-----------------------------------------|--------------------------------------|
-| Switch IO                        | SENSOR        | `sum_port_speed_bps_io`                 | MB/s                                 |
-| Switch Traffic Received          | SENSOR        | `sum_port_traffic_rx`                   | MB (in response time)                |
-| Switch Traffic Transferred       | SENSOR        | `sum_port_traffic_tx`                   | MB (in response time)                |
+| Sensor Name                | Platform | mapped key from `get_switch_infos()` | Unit                  |
+| -------------------------- | -------- | ------------------------------------ | --------------------- |
+| Switch IO                  | SENSOR   | `sum_port_speed_bps_io`              | MB/s                  |
+| Switch Traffic Received    | SENSOR   | `sum_port_traffic_rx`                | MB (in response time) |
+| Switch Traffic Transferred | SENSOR   | `sum_port_traffic_tx`                | MB (in response time) |
 
 ## Supported and tested NETGEAR Models/Products and firmware versions
 
-| Model    | Ports    | Firmware versions                            | Bootloader versions |
-|----------|----------|----------------------------------------------|---------------------|
-| GS105E   | 5        | ?                                            |                     |
-| GS108E   | 8        | V1.00.11                                     | V1.00.03            |
-| GS105Ev3 | 5        | ?                                            |                     |
-| GS108Ev3 | 8        | V2.00.05, V2.06.10, V2.06.17, V2.06.24       | V2.06.01 - V2.06.03 |
-| GS305EP  | 5        | V1.0.1.1                                     |                     |
-| GS308EP  | 8        | V1.0.0.10, V1.0.1.4                          |                     |
+| Model    | Ports | Firmware versions                      | Bootloader versions |
+| -------- | ----- | -------------------------------------- | ------------------- |
+| GS105E   | 5     | ?                                      |                     |
+| GS108E   | 8     | V1.00.11                               | V1.00.03            |
+| GS105Ev3 | 5     | ?                                      |                     |
+| GS108Ev3 | 8     | V2.00.05, V2.06.10, V2.06.17, V2.06.24 | V2.06.01 - V2.06.03 |
+| GS305EP  | 5     | V1.0.1.1                               |                     |
+| GS308EP  | 8     | V1.0.0.10, V1.0.1.4                    |                     |
+| GS308EPP | 8     | ?                                      |                     |
 
 Supported firmware languages: GR (German), EN (English)
+
+# Unsupported models
+
+| Model     | Support status                                         |
+| --------- | ------------------------------------------------------ |
+| GS108PEv3 | Not yet started                                        |
+| GS316EP   | Login is supported, statistics and PoE control not yet |
+| GS316EPP  | Login is supported, statistics and PoE control not yet |
 
 ## How to integrate in Home Assistant
 
@@ -80,7 +92,6 @@ Example with [ha-sankey-chart](https://github.com/MindFreeze/ha-sankey-chart)
 Example with [mini-graph-card](https://github.com/kalkih/mini-graph-card)
 
 ![image](https://github.com/ckarrie/ckw-ha-gs108e/assets/4140156/9f390bab-6d3e-4e9c-83df-39bd230d7309)
-
 
 ```yaml
 type: custom:mini-graph-card
@@ -132,8 +143,7 @@ Using this VENV go to your local source folder
 ### Example calls
 
 ```shell
-cd ~/workspace/src/ckw-ha-gs108e/custom_components/ckw_hass_gs108e
-python3
+cd ~/workspace/ha-netgear-plus/custom_components/netgear_plus
 ```
 
 ```python

@@ -149,6 +149,17 @@ class GS308EP(GS3xxSeries):
     ]
 
 
+class GS308EPP(GS308EP):
+    """Definition for Netgear GS308EPP model."""
+
+    MODEL_NAME = "GS308EPP"
+    POE_MAX_POWER_ALL_PORTS = 123
+    CHECKS_AND_RESULTS: ClassVar = [
+        ("check_login_form_rand", [True]),
+        ("check_login_title_tag", ["GS308EPP"]),
+    ]
+
+
 class GS316EP(GS3xxSeries):
     """Definition for Netgear GS316EP model."""
 
@@ -188,6 +199,7 @@ MODELS = [
     GS108Ev3,
     GS305EP,
     GS308EP,
+    GS308EPP,
     GS316EP,
     GS316EPP,
 ]
