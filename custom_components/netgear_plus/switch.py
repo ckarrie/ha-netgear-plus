@@ -1,19 +1,27 @@
+"""Module to set up the Netgear PoE switch entities for Home Assistant."""
+
 import logging
 
 from homeassistant.components.switch import SwitchDeviceClass
+from homeassistant.config_entries import ConfigEntry
+from homeassistant.core import HomeAssistant
+from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
 from . import const
 from .netgear_entities import (
     HomeAssistantNetgearSwitch,
     NetgearBinarySensorEntityDescription,
     NetgearPOESwitchEntity,
-    NetgearSensorEntityDescription,
 )
 
 _LOGGER = logging.getLogger(__name__)
 
 
-async def async_setup_entry(hass, config_entry, async_add_entities):
+async def async_setup_entry(
+    hass: HomeAssistant,
+    config_entry: ConfigEntry,
+    async_add_entities: AddEntitiesCallback,
+) -> None:
     """Set up the Fritzbox smarthome switch from config_entry."""
     entities = []
     gs_switch: HomeAssistantNetgearSwitch = hass.data[const.DOMAIN][
@@ -23,12 +31,13 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
         const.KEY_COORDINATOR_SWITCH_INFOS
     ]
 
-    if gs_switch.api.poe_ports and len(gs_switch.api.poe_ports) > 0:
+    if gs_switch.api and gs_switch.api.poe_ports and len(gs_switch.api.poe_ports) > 0:
+        _LOGGER.info(
+            "[switch.async_setup_entry] setting up Platform.SWITCH for %s Switch Ports",
+            gs_switch.api.poe_ports,
+        )
 
-        _LOGGER.info(f"[switch.async_setup_entry] setting up Platform.SWITCH for {gs_switch.api.poe_ports} Switch Ports")
-        
         for poe_port in gs_switch.api.poe_ports:
-            # poe_port_power_status = port_{poe_port_nr}_poe_power
             switch_entity = NetgearPOESwitchEntity(
                 coordinator=coordinator_switch_infos,
                 hub=gs_switch,
@@ -36,8 +45,6 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
                     key=f"port_{poe_port}_poe_power_active",
                     name=f"Port {poe_port} PoE Power",
                     device_class=SwitchDeviceClass.OUTLET,
-                    # value=gs_switch.api._loaded_switch_infos,
-                    # value="off",
                 ),
                 port_nr=poe_port,
             )

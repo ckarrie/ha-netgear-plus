@@ -1,58 +1,59 @@
+"""Entity defitions for Netgear Plus Switches."""
+
+import logging
 from collections.abc import Callable
 from dataclasses import dataclass
 from datetime import date, datetime
 from decimal import Decimal
-import logging
+from typing import Any
 
 from homeassistant.components.binary_sensor import (
     BinarySensorDeviceClass,
     BinarySensorEntity,
     BinarySensorEntityDescription,
 )
-from homeassistant.components.button import(
+from homeassistant.components.button import (
     ButtonDeviceClass,
     ButtonEntity,
     ButtonEntityDescription,
 )
 from homeassistant.components.sensor import (
     RestoreSensor,
-    SensorDeviceClass,
-    SensorEntity,
     SensorEntityDescription,
-    SensorStateClass,
 )
+from homeassistant.components.sensor.const import SensorStateClass
 from homeassistant.components.switch import SwitchEntity
-from homeassistant.core import HomeAssistant, callback
+from homeassistant.core import callback
 from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers.entity import EntityCategory
-from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.typing import StateType
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
 
-from .netgear_switch import (
-    NetgearCoordinatorEntity,
-    NetgearAPICoordinatorEntity,
-    HomeAssistantNetgearSwitch,
-)
 from . import const
+from .netgear_switch import (
+    HomeAssistantNetgearSwitch,
+    NetgearAPICoordinatorEntity,
+    NetgearCoordinatorEntity,
+)
 
 _LOGGER = logging.getLogger(__name__)
 
 
-@dataclass
+@dataclass(frozen=True)
 class NetgearSensorEntityDescription(SensorEntityDescription):
-    """Class describing Netgear sensor entities."""
+    """Describes Netgear sensor entities."""
 
     value: Callable = lambda data: data
     index: int = 0
 
 
-@dataclass
+@dataclass(frozen=True)
 class NetgearBinarySensorEntityDescription(BinarySensorEntityDescription):
+    """Describes Netgear binary sensor entities."""
+
     value: Callable = lambda data: data
     index: int = 0
 
-    device_class: SensorDeviceClass | None = None
+    device_class: BinarySensorDeviceClass | str | None = None
     last_reset: datetime | None = None
     native_unit_of_measurement: str | None = None
     options: list[str] | None = None
@@ -63,8 +64,10 @@ class NetgearBinarySensorEntityDescription(BinarySensorEntityDescription):
     native_precision = None
 
 
-@dataclass
+@dataclass(frozen=True)
 class NetgearButtonEntityDescription(ButtonEntityDescription):
+    """Describes Netgear button entities."""
+
     cls: type | None = None
     device_class: ButtonDeviceClass | None = None
     index: int = 0
@@ -73,7 +76,6 @@ class NetgearButtonEntityDescription(ButtonEntityDescription):
 class NetgearRouterSensorEntity(NetgearAPICoordinatorEntity, RestoreSensor):
     """Representation of a device connected to a Netgear router."""
 
-    # _attr_entity_registry_enabled_default = False
     entity_description: NetgearSensorEntityDescription
 
     def __init__(
@@ -92,11 +94,12 @@ class NetgearRouterSensorEntity(NetgearAPICoordinatorEntity, RestoreSensor):
         self._value: StateType | date | datetime | Decimal = None
         self.async_update_device()
 
-    def __repr__(self):
+    def __repr__(self) -> str:
+        """Return human readable object representation."""
         return f"<NetgearNetgearRouterSensorEntity unique_id={self._unique_id}>"
-    
+
     @property
-    def native_value(self):
+    def native_value(self) -> StateType | date | datetime | Decimal:
         """Return the state of the sensor."""
         return self._value
 
@@ -130,7 +133,6 @@ class NetgearRouterSensorEntity(NetgearAPICoordinatorEntity, RestoreSensor):
 class NetgearRouterBinarySensorEntity(NetgearAPICoordinatorEntity, BinarySensorEntity):
     """Representation of a device connected to a Netgear router."""
 
-    # _attr_entity_registry_enabled_default = False
     entity_description: NetgearBinarySensorEntityDescription
     _attr_device_class = BinarySensorDeviceClass.CONNECTIVITY
 
@@ -151,11 +153,12 @@ class NetgearRouterBinarySensorEntity(NetgearAPICoordinatorEntity, BinarySensorE
         self._attr_is_on = False
         self.async_update_device()
 
-    def __repr__(self):
+    def __repr__(self) -> str:
+        """Return human readable object representation."""
         return f"<NetgearRouterBinarySensorEntity unique_id={self._unique_id}>"
 
     @property
-    def native_value(self):
+    def native_value(self) -> StateType | bool:
         """Return the state of the sensor."""
         return self._value
 
@@ -169,6 +172,7 @@ class NetgearRouterBinarySensorEntity(NetgearAPICoordinatorEntity, BinarySensorE
 
     @property
     def available(self) -> bool:
+        """Return entity availability."""
         return True
 
     @property
@@ -199,7 +203,7 @@ class NetgearRouterBinarySensorEntity(NetgearAPICoordinatorEntity, BinarySensorE
 class NetgearPOESwitchEntity(NetgearAPICoordinatorEntity, SwitchEntity):
     """Represents a POE On/Off Power Switch in HomeAssistant."""
 
-    entity_description = NetgearBinarySensorEntityDescription
+    entity_description: NetgearBinarySensorEntityDescription
 
     def __init__(
         self,
@@ -219,11 +223,14 @@ class NetgearPOESwitchEntity(NetgearAPICoordinatorEntity, SwitchEntity):
         self._value = None
         self.hub = hub
 
-    def __repr__(self):
-        return f"<NetgearPOESwitchEntity unique_id={self._unique_id} port_nr={self.port_nr}>"
+    def __repr__(self) -> str:
+        """Return human readable object representation."""
+        return f"<NetgearPOESwitchEntity \
+unique_id={self._unique_id} port_nr={self.port_nr}>"
 
     @callback
     def async_update_device(self) -> None:
+        """Update entities with data from switch."""
         if self.coordinator.data is None:
             return
 
@@ -240,32 +247,43 @@ class NetgearPOESwitchEntity(NetgearAPICoordinatorEntity, SwitchEntity):
         self._value = self.entity_description.value(data)
 
     @property
-    def is_on(self):
+    def is_on(self) -> bool:
         """Return true if device is on."""
         return self._value in const.ON_VALUES
 
-    async def async_turn_on(self, **kwargs):
-        successful = await self.hub.hass.async_add_executor_job(
-            self.hub.api.turn_on_poe_port, self.port_nr
-        )
-        self._value = "on" if successful else "off"
-        _LOGGER.info(
-            f"called turn_on_poe_port for uid={self._unique_id} port={self.port_nr}: successful={successful}"
-        )
+    async def async_turn_on(self, **kwargs: dict[str, Any]) -> None:  # noqa: ARG002
+        """Enable power on PoE port."""
+        if self.port_nr:
+            successful = await self.hub.hass.async_add_executor_job(
+                self.hub.api.turn_on_poe_port, self.port_nr
+            )
+            self._value = "on" if successful else "off"
+            _LOGGER.info(
+                "called turn_on_poe_port for uid=%s port=%s: successful=%s",
+                self._unique_id,
+                self.port_nr,
+                successful,
+            )
 
-    async def async_turn_off(self, **kwargs):
-        successful = self.hub.hass.async_add_executor_job(
-            self.hub.api.turn_off_poe_port, self.port_nr
-        )
-        self._value = "off" if successful else "on"
-        _LOGGER.info(
-            f"called turn_off_poe_port for uid={self._unique_id} port={self.port_nr}: successful={successful}"
-        )
+    async def async_turn_off(self, **kwargs: dict[str, Any]) -> None:  # noqa: ARG002
+        """Disable power on PoE port."""
+        if self.port_nr:
+            successful = self.hub.hass.async_add_executor_job(
+                self.hub.api.turn_off_poe_port, self.port_nr
+            )
+            self._value = "off" if successful else "on"
+            _LOGGER.info(
+                "called turn_off_poe_port for uid=%s port=%s: successful=%s",
+                self._unique_id,
+                self.port_nr,
+                successful,
+            )
+
 
 class NetgearPoEPowerCycleButtonEntity(NetgearCoordinatorEntity, ButtonEntity):
     """Represents a PoE Power Cycle Button in HomeAssistant."""
 
-    entity_description = NetgearButtonEntityDescription
+    entity_description: NetgearButtonEntityDescription
     _attr_device_class = ButtonDeviceClass.RESTART
 
     def __init__(
@@ -285,19 +303,26 @@ class NetgearPoEPowerCycleButtonEntity(NetgearCoordinatorEntity, ButtonEntity):
         self.port_nr = port_nr
         self.hub = hub
 
-    def __repr__(self):
-        return f"<NetgearPoEPowerCycleButtonEntity unique_id={self._unique_id} port_nr={self.port_nr}>"
+    def __repr__(self) -> str:
+        """Return human readable object representation."""
+        return f"<NetgearPoEPowerCycleButtonEntity \
+unique_id={self._unique_id} port_nr={self.port_nr}>"
 
     async def async_press(self) -> None:
         """Power Cycle Port."""
+        if self.port_nr:
+            successful = await self.hub.hass.async_add_executor_job(
+                self.hub.api.power_cycle_poe_port, self.port_nr
+            )
+            _LOGGER.info(
+                "called power_cycle_poe_port for uid=%s port=%s: successful=%s",
+                self._unique_id,
+                self.port_nr,
+                successful,
+            )
+            if not successful:
+                message = f"Running command 'power_cycle_poe_port' \
+for port {self.port_nr} failed"
+                raise HomeAssistantError(message)
 
-        successful = await self.hub.hass.async_add_executor_job(
-            self.hub.api.power_cycle_poe_port, self.port_nr
-        )
-        _LOGGER.info(
-            f"called power_cycle_poe_port for uid={self._unique_id} port={self.port_nr}: successful={successful}"
-        )
-        if not successful:
-            raise HomeAssistantError(f"Running command '{self.key}' failed")
-
-        await self.coordinator.async_request_refresh()
+            await self.coordinator.async_request_refresh()
