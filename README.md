@@ -1,5 +1,9 @@
 # Home Assistant NETGEAR Plus Switches Integration
 
+## Warning for users of version <= v0.6.1 installed through HACS
+
+Due to the renaming of the integration and the repository, HACS gets confused and installs the new version next to the old one instead of replacing the old version. Please remove the old version first before installing the latest release.
+
 ## What it does
 
 Grabs statistical network data from [supported NETGEAR Switches](#supported-and-tested-netgear-modelsproducts-and-firmwares) from the
