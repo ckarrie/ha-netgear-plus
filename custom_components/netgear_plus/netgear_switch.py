@@ -16,10 +16,10 @@ from homeassistant.helpers.update_coordinator import (
     CoordinatorEntity,
     DataUpdateCoordinator,
 )
+from py_netgear_plus import NetgearSwitchConnector
 
 from .const import DOMAIN
 from .errors import CannotLoginError
-from .netgear_plus import NetgearSwitchConnector
 
 _LOGGER = logging.getLogger(__name__)
 

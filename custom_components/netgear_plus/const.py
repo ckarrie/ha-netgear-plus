@@ -3,8 +3,7 @@
 from datetime import timedelta
 
 from homeassistant.const import Platform
-
-from .netgear_plus import models
+from py_netgear_plus import models
 
 DOMAIN = "netgear_plus"
 
