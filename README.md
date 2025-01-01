@@ -66,16 +66,16 @@ some basic configuration updates.
 | GS305EP  | 5     | V1.0.1.1                               |                     |
 | GS308EP  | 8     | V1.0.0.10, V1.0.1.4                    |                     |
 | GS308EPP | 8     | ?                                      |                     |
+| GS316EP  | 16    | v1.0.4.4                               |                     |
+| GS316EPP | 16    | v1.0.4.4                               |                     |
 
 Supported firmware languages: GR (German), EN (English)
 
 # Unsupported models
 
-| Model     | Support status                                         |
-| --------- | ------------------------------------------------------ |
-| GS108PEv3 | Not yet started                                        |
-| GS316EP   | Login is supported, statistics and PoE control not yet |
-| GS316EPP  | Login is supported, statistics and PoE control not yet |
+| Model     | Support status  |
+| --------- | --------------- |
+| GS108PEv3 | Not yet started |
 
 ## How to integrate in Home Assistant
 
@@ -87,7 +87,7 @@ Supported firmware languages: GR (German), EN (English)
 
 After adding the integration go to [Add Integration](https://my.home-assistant.io/redirect/integrations/) and select **NETGEAR Plus**.
 
-### Lovelance examples
+### Lovelace examples
 
 Example with [ha-sankey-chart](https://github.com/MindFreeze/ha-sankey-chart)
 
@@ -139,22 +139,18 @@ animate: true
 python3 -m venv test-netgear
 cd test-netgear
 source bin/activate
-pip install lxml requests
+pip install lxml requests py-netgear-plus
 ```
 
 Using this VENV go to your local source folder
 
 ### Example calls
 
-```shell
-cd ~/workspace/ha-netgear-plus/custom_components/netgear_plus
-```
-
 ```python
 ip = '192.168.178.68'
 p = 'fyce4gKZemkqjDY'
-import netgear_plus
-sw = netgear_plus.NetgearSwitchConnector(ip, p)
+import py_netgear_plus
+sw = py_netgear_plus.NetgearSwitchConnector(ip, p)
 sw.autodetect_model()
 sw.get_login_cookie()
 
