@@ -6,12 +6,12 @@
   "documentation": "https://github.com/ckarrie/ha-netgear-plus/blob/main/README.md",
   "iot_class": "local_polling",
   "issue_tracker": "https://github.com/ckarrie/ha-netgear-plus/issues",
-  "requirements": ["lxml>=4.6.1", "py-netgear-plus>=0.3.0"],
+  "requirements": ["lxml>=4.6.1", "py-netgear-plus==0.3.1pre1"],
   "ssdp": [
     {
       "manufacturer": "NETGEAR",
       "deviceType": "urn:schemas-upnp-org:device:InternetGatewayDevice:1"
     }
   ],
-  "version": "0.7.0"
+  "version": "0.7.1pre0"
 }
