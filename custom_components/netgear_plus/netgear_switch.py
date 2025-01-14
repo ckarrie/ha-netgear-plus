@@ -17,6 +17,7 @@ from homeassistant.helpers.update_coordinator import (
     DataUpdateCoordinator,
 )
 from py_netgear_plus import NetgearSwitchConnector
+from py_netgear_plus import __version__ as api_version
 
 from .const import DOMAIN
 from .errors import CannotLoginError
@@ -28,6 +29,11 @@ def get_api(host: str, password: str = "") -> NetgearSwitchConnector:
     """Get the Netgear API and login to it."""
     api: NetgearSwitchConnector = NetgearSwitchConnector(host, password)
     api.autodetect_model()
+    _LOGGER.info(
+        "Created NetgearSwitchConnector API version %s for model %s.",
+        str(api_version),
+        str(api.switch_model.MODEL_NAME),
+    )
     # Only login if password is not empty.
     # This allows to call get_unique_id before the user has provided a password
     if password and not api.get_login_cookie():
