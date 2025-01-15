@@ -34,7 +34,7 @@ async def async_setup_entry(
     if gs_switch.api and gs_switch.api.poe_ports and len(gs_switch.api.poe_ports) > 0:
         _LOGGER.info(
             "[switch.async_setup_entry] setting up Platform.SWITCH for %s Switch Ports",
-            gs_switch.api.poe_ports,
+            len(gs_switch.api.poe_ports),
         )
 
         for poe_port in gs_switch.api.poe_ports:
