@@ -76,6 +76,7 @@ Supported firmware languages: GR (German), EN (English)
 
 | Model     | Support status  |
 | --------- | --------------- |
+| JGS524Ev2 | In progress     |
 | GS108PEv3 | Not yet started |
 | GS105Ev2  | Not yet started |
 | GS110EMX  | Not yet started |
