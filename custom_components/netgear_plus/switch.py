@@ -11,6 +11,7 @@ from . import const
 from .netgear_entities import (
     HomeAssistantNetgearSwitch,
     NetgearBinarySensorEntityDescription,
+    NetgearLedSwitchEntity,
     NetgearPOESwitchEntity,
 )
 
@@ -50,5 +51,23 @@ async def async_setup_entry(
             )
 
             entities.append(switch_entity)
+
+    if gs_switch.api and gs_switch.api.switch_model.has_led_switch():
+        _LOGGER.info(
+            "[switch.async_setup_entry] setting up Platform.SWITCH for Front Panel LEDs"
+        )
+
+        switch_entity = NetgearLedSwitchEntity(
+            coordinator=coordinator_switch_infos,
+            hub=gs_switch,
+            entity_description=NetgearBinarySensorEntityDescription(
+                key="led_status",
+                name="Front Panel LEDs",
+                device_class=SwitchDeviceClass.SWITCH,
+            ),
+            port_nr=poe_port,
+        )
+
+        entities.append(switch_entity)
 
     async_add_entities(entities)

@@ -326,3 +326,77 @@ for port {self.port_nr} failed"
                 raise HomeAssistantError(message)
 
             await self.coordinator.async_request_refresh()
+
+
+class NetgearLedSwitchEntity(NetgearAPICoordinatorEntity, SwitchEntity):
+    """Represents a Front Panel LED Switch in HomeAssistant."""
+
+    entity_description: NetgearBinarySensorEntityDescription
+
+    def __init__(
+        self,
+        coordinator: DataUpdateCoordinator,
+        hub: HomeAssistantNetgearSwitch,
+        entity_description: NetgearBinarySensorEntityDescription,
+    ) -> None:
+        """Initialize a Netgear device."""
+        super().__init__(coordinator, hub)
+        self.entity_description = entity_description
+        self._name = f"{hub.device_name} {entity_description.name}"
+        self._unique_id = (
+            f"{hub.unique_id}-{entity_description.key}-{entity_description.index}"
+        )
+        self._value = None
+        self.hub = hub
+
+    def __repr__(self) -> str:
+        """Return human readable object representation."""
+        return f"<NetgearLEDSwitchEntity unique_id={self._unique_id}>"
+
+    @callback
+    def async_update_device(self) -> None:
+        """Update entities with data from switch."""
+        if self.coordinator.data is None:
+            return
+
+        data = self.coordinator.data.get(self.entity_description.key)
+        if data is None:
+            self._value = None
+            _LOGGER.debug(
+                "key '%s' not in Netgear router response '%s'",
+                self.entity_description.key,
+                data,
+            )
+            return
+
+        self._value = self.entity_description.value(data)
+
+    @property
+    def is_on(self) -> bool:
+        """Return true if device is on."""
+        return self._value in const.ON_VALUES
+
+    async def async_turn_on(self, **kwargs: dict[str, Any]) -> None:  # noqa: ARG002
+        """Enable front panel LEDs."""
+        successful = await self.hub.hass.async_add_executor_job(
+            self.hub.api.turn_on_leds
+        )
+        self._value = "on" if successful else "off"
+        _LOGGER.info(
+            "called turn_on_leds for uid=%s: successful=%s",
+            self._unique_id,
+            successful,
+        )
+
+    async def async_turn_off(self, **kwargs: dict[str, Any]) -> None:  # noqa: ARG002
+        """Disable power on PoE port."""
+        if self.port_nr:
+            successful = self.hub.hass.async_add_executor_job(
+                self.hub.api.turn_off_leds
+            )
+            self._value = "off" if successful else "on"
+            _LOGGER.info(
+                "called turn_off_leds for uid=%s: successful=%s",
+                self._unique_id,
+                successful,
+            )
