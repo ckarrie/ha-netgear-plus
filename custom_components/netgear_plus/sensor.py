@@ -135,7 +135,7 @@ PORT_TEMPLATE = OrderedDict(
         },
         "port_{port}_connection_speed": {
             "name": "Port {port} Link Speed",
-            "native_unit_of_measurement": UnitOfDataRate.MEGABYTES_PER_SECOND,
+            "native_unit_of_measurement": UnitOfDataRate.MEGABITS_PER_SECOND,
             "device_class": SensorDeviceClass.DATA_RATE,
             #'icon': "mdi:upload"
         },
