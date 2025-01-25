@@ -65,7 +65,6 @@ async def async_setup_entry(
                 name="Front Panel LEDs",
                 device_class=SwitchDeviceClass.SWITCH,
             ),
-            port_nr=poe_port,
         )
 
         entities.append(switch_entity)
