@@ -390,13 +390,10 @@ class NetgearLedSwitchEntity(NetgearAPICoordinatorEntity, SwitchEntity):
 
     async def async_turn_off(self, **kwargs: dict[str, Any]) -> None:  # noqa: ARG002
         """Disable power on PoE port."""
-        if self.port_nr:
-            successful = self.hub.hass.async_add_executor_job(
-                self.hub.api.turn_off_leds
-            )
-            self._value = "off" if successful else "on"
-            _LOGGER.info(
-                "called turn_off_leds for uid=%s: successful=%s",
-                self._unique_id,
-                successful,
-            )
+        successful = self.hub.hass.async_add_executor_job(self.hub.api.turn_off_leds)
+        self._value = "off" if successful else "on"
+        _LOGGER.info(
+            "called turn_off_leds for uid=%s: successful=%s",
+            self._unique_id,
+            successful,
+        )
