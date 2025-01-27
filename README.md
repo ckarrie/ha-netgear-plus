@@ -69,6 +69,7 @@ some basic configuration updates.
 | GS308EPP | 8     | V1.0.1.4                               |                     |
 | GS316EP  | 16    | V1.0.4.4                               |                     |
 | GS316EPP | 16    | V1.0.4.4                               |                     |
+| JGS24Ev2 | 24    | V2.6.0.48                              |                     |
 
 Supported firmware languages: GR (German), EN (English)
 
@@ -76,10 +77,9 @@ Supported firmware languages: GR (German), EN (English)
 
 | Model     | Support status  |
 | --------- | --------------- |
-| JGS524Ev2 | In progress     |
-| GS108PEv3 | Not yet started |
+| GS108PEv3 | In progress     |
 | GS105Ev2  | Not yet started |
-| GS110EMX  | Not yet started |
+| GS110EMX  | In progress     |
 | XS512EM   | Not yet started |
 
 ## How to integrate in Home Assistant
