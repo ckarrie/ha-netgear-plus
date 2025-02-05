@@ -1,6 +1,6 @@
 colorlog==6.9.0
 homeassistant>=2024.12.5
 lxml>=4.6.1
-py-netgear-plus==v0.4.3rc1
+py-netgear-plus==v0.4.3rc9
 pip>=21.3.1
 ruff==0.9.4
