@@ -57,19 +57,22 @@ some basic configuration updates.
 
 ## Supported and tested NETGEAR Models/Products and firmware versions
 
-| Model    | Ports | Firmware versions                      | Bootloader versions |
-| -------- | ----- | -------------------------------------- | ------------------- |
-| GS105E   | 5     | ?                                      |                     |
-| GS108E   | 8     | V1.00.11                               | V1.00.03            |
-| GS105Ev3 | 5     | ?                                      |                     |
-| GS108Ev3 | 8     | V2.00.05, V2.06.10, V2.06.17, V2.06.24 | V2.06.01 - V2.06.03 |
-| GS305EP  | 5     | V1.0.1.1                               |                     |
-| GS305EPP | 5     | V1.0.1.4                               |                     |
-| GS308EP  | 8     | V1.0.0.10, V1.0.1.4                    |                     |
-| GS308EPP | 8     | V1.0.1.4                               |                     |
-| GS316EP  | 16    | V1.0.4.4                               |                     |
-| GS316EPP | 16    | V1.0.4.4                               |                     |
-| JGS24Ev2 | 24    | V2.6.0.48                              |                     |
+| Model     | Ports | Firmware versions                      | Bootloader versions |
+| --------- | ----- | -------------------------------------- | ------------------- |
+| GS105E    | 5     | ?                                      |                     |
+| GS108E    | 8     | V1.00.11                               | V1.00.03            |
+| GS105Ev3  | 5     | ?                                      |                     |
+| GS108Ev3  | 8     | V2.00.05, V2.06.10, V2.06.17, V2.06.24 | V2.06.01 - V2.06.03 |
+| GS108EPv3 | 8     | ?                                      |                     |
+| GS110EMX  | 10    | V1.0.2.8                               |                     |
+| GS305EP   | 5     | V1.0.1.1                               |                     |
+| GS305EPP  | 5     | V1.0.1.4                               |                     |
+| GS308EP   | 8     | V1.0.0.10, V1.0.1.4                    |                     |
+| GS308EPP  | 8     | V1.0.1.4                               |                     |
+| GS316EP   | 16    | V1.0.4.4                               |                     |
+| GS316EPP  | 16    | V1.0.4.4                               |                     |
+| JGS24Ev2  | 24    | V2.6.0.48                              |                     |
+| XS512EM   | 12    | V1.0.2.8                               |                     |
 
 Supported firmware languages: GR (German), EN (English)
 
@@ -77,10 +80,7 @@ Supported firmware languages: GR (German), EN (English)
 
 | Model     | Support status  |
 | --------- | --------------- |
-| GS108PEv3 | In progress     |
 | GS105Ev2  | Not yet started |
-| GS110EMX  | In progress     |
-| XS512EM   | Not yet started |
 
 ## How to integrate in Home Assistant
 
