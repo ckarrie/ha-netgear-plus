@@ -8,18 +8,16 @@ from typing import TYPE_CHECKING
 
 from homeassistant.components.binary_sensor import BinarySensorDeviceClass
 
-from .const import DOMAIN, KEY_COORDINATOR_SWITCH_INFOS, KEY_SWITCH
 from .netgear_entities import (
     NetgearBinarySensorEntityDescription,
     NetgearRouterBinarySensorEntity,
 )
 
 if TYPE_CHECKING:
-    from homeassistant.config_entries import ConfigEntry
     from homeassistant.core import HomeAssistant
     from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
-    from .netgear_switch import HomeAssistantNetgearSwitch
+    from . import NetgearSwitchConfigEntry
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -35,15 +33,14 @@ PORT_TEMPLATE = OrderedDict(
 
 
 async def async_setup_entry(
-    hass: HomeAssistant, entry: ConfigEntry, async_add_entities: AddEntitiesCallback
+    hass: HomeAssistant,
+    entry: NetgearSwitchConfigEntry,
+    async_add_entities: AddEntitiesCallback,
 ) -> None:
     """Set up device tracker for Netgear component."""
-    gs_switch: HomeAssistantNetgearSwitch = hass.data[DOMAIN][entry.entry_id][
-        KEY_SWITCH
-    ]
-    coordinator_switch_infos = hass.data[DOMAIN][entry.entry_id][
-        KEY_COORDINATOR_SWITCH_INFOS
-    ]
+    del hass
+    gs_switch = entry.runtime_data.gs_switch
+    coordinator_switch_infos = entry.runtime_data.coordinator_switch_infos
 
     # Router entities
     switch_entities = []
