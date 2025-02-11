@@ -60,6 +60,8 @@ some basic configuration updates.
 | Model     | Ports | Firmware versions                      | Bootloader versions |
 | --------- | ----- | -------------------------------------- | ------------------- |
 | GS105E    | 5     | ?                                      |                     |
+| GS105Ev2  | 5     | ?                                      |                     |
+| GS105Ev3  | 5     | ?                                      |                     |
 | GS108E    | 8     | V1.00.11                               | V1.00.03            |
 | GS105Ev3  | 5     | ?                                      |                     |
 | GS108Ev3  | 8     | V2.00.05, V2.06.10, V2.06.17, V2.06.24 | V2.06.01 - V2.06.03 |
@@ -78,17 +80,19 @@ Supported firmware languages: GR (German), EN (English)
 
 ## Unsupported models
 
-| Model     | Support status  |
-| --------- | --------------- |
-| GS105Ev2  | Not yet started |
+| Model | Support status |
+| ----- | -------------- |
+|       | No open issues |
+
+Do you have a NETGEAR Plus switch model that is currently not supported, open a [GitHub issue](https://github.com/ckarrie/ha-netgear-plus/issues/new?template=feature_request.yml). The actual API to the switch is implemented in the [py-netgear-plus](https://github.com/foxey/py-netgear-plus) library. Are you willing to contribute, please read the [instruction on adding your model](https://github.com/foxey/py-netgear-plus/blob/main/HOWTO_Add_New_Models.md) to this library and create a pull request for [py-netgear-plus](https://github.com/foxey/py-netgear-plus) first.
 
 ## How to integrate in Home Assistant
 
-[![Open your Home Assistant instance and open a repository inside the Home Assistant Community Store.](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=ckarrie&repository=ckw-ha-gs108e&category=integration)
+[![Open your Home Assistant instance and open a repository inside the Home Assistant Community Store.](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=ckarrie&repository=ha-netgear-plus&category=integration)
 
 1. In your Home Assistant instance, goto **HACS** (Search: ">hacs")
 2. Click on the right corner on the vertical dots and select "Custom Repositories"
-3. Add "https://github.com/ckarrie/ckw-ha-gs108e" as Integration
+3. Add "https://github.com/ckarrie/ha-netgear-plus" as Integration
 
 After adding the integration go to [Add Integration](https://my.home-assistant.io/redirect/integrations/) and select **NETGEAR Plus**.
 
