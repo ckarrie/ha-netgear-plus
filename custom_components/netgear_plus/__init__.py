@@ -8,6 +8,7 @@ from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
     from homeassistant.config_entries import ConfigEntry
+from attr import dataclass
 from homeassistant.const import CONF_HOST
 
 if TYPE_CHECKING:
@@ -18,8 +19,6 @@ from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
 
 from .const import (
     DOMAIN,
-    KEY_COORDINATOR_SWITCH_INFOS,
-    KEY_SWITCH,
     PLATFORMS,
     SCAN_INTERVAL,
 )
@@ -30,8 +29,20 @@ _LOGGER = logging.getLogger(__name__)
 
 SCAN_INTERVAL_TIMEDELTA = timedelta(seconds=SCAN_INTERVAL)
 
+type NetgearSwitchConfigEntry = ConfigEntry[NetgearSwitchData]
 
-async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+
+@dataclass
+class NetgearSwitchData:
+    """Runtime Data for ConfigEntry."""
+
+    gs_switch: HomeAssistantNetgearSwitch
+    coordinator_switch_infos: DataUpdateCoordinator
+
+
+async def async_setup_entry(
+    hass: HomeAssistant, entry: NetgearSwitchConfigEntry
+) -> bool:
     """Set up Netgear component."""
     gs_switch = HomeAssistantNetgearSwitch(hass, entry)
     try:
@@ -39,8 +50,6 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             raise ConfigEntryNotReady
     except CannotLoginError as ex:
         raise ConfigEntryNotReady from ex
-
-    hass.data.setdefault(DOMAIN, {})
 
     entry.async_on_unload(entry.add_update_listener(update_listener))
 
@@ -72,10 +81,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
     await coordinator_switch_infos.async_config_entry_first_refresh()
 
-    hass.data[DOMAIN][entry.entry_id] = {
-        KEY_SWITCH: gs_switch,
-        KEY_COORDINATOR_SWITCH_INFOS: coordinator_switch_infos,
-    }
+    entry.runtime_data = NetgearSwitchData(gs_switch, coordinator_switch_infos)  # type: ignore argument-type
 
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
 
@@ -84,14 +90,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
 async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Unload a config entry."""
-    unload_ok = await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
-
-    if unload_ok:
-        hass.data[DOMAIN].pop(entry.entry_id)
-        if not hass.data[DOMAIN]:
-            hass.data.pop(DOMAIN)
-
-    return unload_ok
+    return await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
 
 
 async def update_listener(hass: HomeAssistant, config_entry: ConfigEntry) -> None:

@@ -11,7 +11,7 @@ from homeassistant.components.sensor.const import (
 )
 
 if TYPE_CHECKING:
-    from homeassistant.config_entries import ConfigEntry
+    from custom_components.netgear_plus import NetgearSwitchConfigEntry
 from homeassistant.const import (
     UnitOfDataRate,
     UnitOfInformation,
@@ -20,18 +20,13 @@ from homeassistant.const import (
 )
 
 if TYPE_CHECKING:
-    from homeassistant.config_entries import ConfigEntry
     from homeassistant.core import HomeAssistant
 from homeassistant.const import EntityCategory
 
 if TYPE_CHECKING:
     from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
-from .const import DOMAIN, KEY_COORDINATOR_SWITCH_INFOS, KEY_SWITCH
 from .netgear_entities import NetgearRouterSensorEntity, NetgearSensorEntityDescription
-
-if TYPE_CHECKING:
-    from .netgear_switch import HomeAssistantNetgearSwitch
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -178,15 +173,14 @@ AGGREGATED_SENSORS = OrderedDict(
 
 
 async def async_setup_entry(
-    hass: HomeAssistant, entry: ConfigEntry, async_add_entities: AddEntitiesCallback
+    hass: HomeAssistant,
+    entry: NetgearSwitchConfigEntry,
+    async_add_entities: AddEntitiesCallback,
 ) -> None:
     """Set up device tracker for Netgear component."""
-    gs_switch: HomeAssistantNetgearSwitch = hass.data[DOMAIN][entry.entry_id][
-        KEY_SWITCH
-    ]
-    coordinator_switch_infos = hass.data[DOMAIN][entry.entry_id][
-        KEY_COORDINATOR_SWITCH_INFOS
-    ]
+    del hass
+    gs_switch = entry.runtime_data.gs_switch
+    coordinator_switch_infos = entry.runtime_data.coordinator_switch_infos
 
     # Router entities
     switch_entities = []
