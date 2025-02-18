@@ -11,7 +11,7 @@ import voluptuous as vol
 from homeassistant import config_entries
 
 if TYPE_CHECKING:
-    from homeassistant.components import ssdp
+    from homeassistant.helpers.service_info.ssdp import SsdpServiceInfo
 from homeassistant.const import CONF_HOST, CONF_PASSWORD, CONF_TIMEOUT
 from homeassistant.core import callback
 from homeassistant.util.network import is_ipv4_address
@@ -113,7 +113,7 @@ class NetgearFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
         )
 
     async def async_step_ssdp(
-        self, discovery_info: ssdp.SsdpServiceInfo
+        self, discovery_info: SsdpServiceInfo
     ) -> ConfigFlowResult:
         """Initialize flow from ssdp."""
         updated_data: dict[str, str | int | bool] = {}
