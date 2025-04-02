@@ -121,7 +121,7 @@ class NetgearFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
 
         device_url = urlparse(discovery_info.ssdp_location)
         if hostname := device_url.hostname:
-            hostname = cast(str, hostname)
+            hostname = cast("str", hostname)
             updated_data[CONF_HOST] = hostname
 
         if not is_ipv4_address(str(hostname)):
