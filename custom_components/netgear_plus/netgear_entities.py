@@ -327,6 +327,47 @@ for port {self.port_nr} failed"
 
             await self.coordinator.async_request_refresh()
 
+class NetgearRebootButtonEntity(NetgearCoordinatorEntity, ButtonEntity):
+    """Represents a reboot Button in HomeAssistant."""
+
+    entity_description: NetgearButtonEntityDescription
+    _attr_device_class = ButtonDeviceClass.RESTART
+
+    def __init__(
+        self,
+        coordinator: DataUpdateCoordinator,
+        hub: HomeAssistantNetgearSwitch,
+        entity_description: NetgearButtonEntityDescription,
+    ) -> None:
+        """Initialize a Netgear device."""
+        super().__init__(coordinator, hub)
+        self.entity_description = entity_description
+        self._name = f"{hub.device_name} {entity_description.name}"
+        self._unique_id = (
+            f"{hub.unique_id}-{entity_description.key}-{entity_description.index}"
+        )
+        self.hub = hub
+
+    def __repr__(self) -> str:
+        """Return human readable object representation."""
+        return f"<NetgearPoEPowerCycleButtonEntity \
+unique_id={self._unique_id}>"
+
+    async def async_press(self) -> None:
+        """Reboot the switch."""
+        successful = await self.hub.hass.async_add_executor_job(
+            self.hub.api.reboot
+        )
+        _LOGGER.info(
+            "called reboot for uid=%s: successful=%s",
+            self._unique_id,
+            successful,
+        )
+        if not successful:
+            message = "Running command 'reboot' failed"
+            raise HomeAssistantError(message)
+
+        await self.coordinator.async_request_refresh()
 
 class NetgearLedSwitchEntity(NetgearAPICoordinatorEntity, SwitchEntity):
     """Represents a Front Panel LED Switch in HomeAssistant."""
