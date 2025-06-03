@@ -1,0 +1,29 @@
+{
+    "config": {
+        "abort": {
+            "already_configured": "L'appareil est déjà configuré"
+        },
+        "error": {
+            "config": "Erreur de connexion ou d'identification : veuillez vérifier votre configuration"
+        },
+        "step": {
+            "user": {
+                "data": {
+                    "host": "Adresse IP du Switch",
+                    "password": "Mot de passe"
+                },
+                "description": "Hôte par défaut: {host}"
+            }
+        }
+    },
+    "options": {
+        "step": {
+            "init": {
+                "data": {
+                    "consider_home": "Délai d'attente (secondes)"
+                },
+                "description": "Spécifier les paramètres optionnels"
+            }
+        }
+    }
+}
