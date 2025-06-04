@@ -327,6 +327,7 @@ for port {self.port_nr} failed"
 
             await self.coordinator.async_request_refresh()
 
+
 class NetgearRebootButtonEntity(NetgearCoordinatorEntity, ButtonEntity):
     """Represents a reboot Button in HomeAssistant."""
 
@@ -355,9 +356,7 @@ unique_id={self._unique_id}>"
 
     async def async_press(self) -> None:
         """Reboot the switch."""
-        successful = await self.hub.hass.async_add_executor_job(
-            self.hub.api.reboot
-        )
+        successful = await self.hub.hass.async_add_executor_job(self.hub.api.reboot)
         _LOGGER.info(
             "called reboot for uid=%s: successful=%s",
             self._unique_id,
@@ -368,6 +367,7 @@ unique_id={self._unique_id}>"
             raise HomeAssistantError(message)
 
         await self.coordinator.async_request_refresh()
+
 
 class NetgearLedSwitchEntity(NetgearAPICoordinatorEntity, SwitchEntity):
     """Represents a Front Panel LED Switch in HomeAssistant."""
