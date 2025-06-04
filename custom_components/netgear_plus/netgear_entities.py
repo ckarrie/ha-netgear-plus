@@ -351,7 +351,7 @@ class NetgearRebootButtonEntity(NetgearCoordinatorEntity, ButtonEntity):
 
     def __repr__(self) -> str:
         """Return human readable object representation."""
-        return f"<NetgearPoEPowerCycleButtonEntity \
+        return f"<NetgearRebootButtonEntity \
 unique_id={self._unique_id}>"
 
     async def async_press(self) -> None:
