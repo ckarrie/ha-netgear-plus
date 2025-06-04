@@ -10,6 +10,7 @@ from . import NetgearSwitchConfigEntry
 from .netgear_entities import (
     NetgearButtonEntityDescription,
     NetgearPoEPowerCycleButtonEntity,
+    NetgearRebootButtonEntity,
 )
 
 _LOGGER = logging.getLogger(__name__)
@@ -26,13 +27,29 @@ async def async_setup_entry(
     gs_switch = config_entry.runtime_data.gs_switch
     coordinator_switch_infos = config_entry.runtime_data.coordinator_switch_infos
 
-    if gs_switch.api and gs_switch.api.poe_ports:
+    if gs_switch.api:
+        n_poe_ports = 0
+        if gs_switch.api.poe_ports:
+            n_poe_ports = len(gs_switch.api.poe_ports)
+
         _LOGGER.info(
             "[button.async_setup_entry] setting up Platform.BUTTON for %s Switch Ports",
-            len(gs_switch.api.poe_ports),
+            n_poe_ports,
         )
 
-        if len(gs_switch.api.poe_ports) > 0:
+        entities.append(
+            NetgearRebootButtonEntity(
+                coordinator=coordinator_switch_infos,
+                hub=gs_switch,
+                entity_description=NetgearButtonEntityDescription(
+                    key="reboot",
+                    name="Reboot Switch",
+                    device_class=ButtonDeviceClass.RESTART,
+                ),
+            )
+        )
+
+        if n_poe_ports > 0:
             for poe_port in gs_switch.api.poe_ports:
                 switch_entity = NetgearPoEPowerCycleButtonEntity(
                     coordinator=coordinator_switch_infos,
