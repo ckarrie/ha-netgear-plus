@@ -30,7 +30,8 @@ async def async_setup_entry(
     if gs_switch.api:
         if gs_switch.api.switch_model.has_reboot_button():
             _LOGGER.info(
-                "[button.async_setup_entry] setting up Platform.BUTTON for Switch Reboot"
+                "[button.async_setup_entry]"
+                " setting up Platform.BUTTON for Switch Reboot"
             )
             entities.append(
                 NetgearRebootButtonEntity(
