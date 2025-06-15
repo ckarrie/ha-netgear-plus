@@ -28,6 +28,22 @@ async def async_setup_entry(
     coordinator_switch_infos = config_entry.runtime_data.coordinator_switch_infos
 
     if gs_switch.api:
+        if gs_switch.api.switch_model.has_reboot_button():
+            _LOGGER.info(
+                "[button.async_setup_entry] setting up Platform.BUTTON for Switch Reboot"
+            )
+            entities.append(
+                NetgearRebootButtonEntity(
+                    coordinator=coordinator_switch_infos,
+                    hub=gs_switch,
+                    entity_description=NetgearButtonEntityDescription(
+                        key="reboot",
+                        name="Reboot Switch",
+                        device_class=ButtonDeviceClass.RESTART,
+                    ),
+                )
+            )
+
         n_poe_ports = 0
         if gs_switch.api.poe_ports:
             n_poe_ports = len(gs_switch.api.poe_ports)
@@ -35,18 +51,6 @@ async def async_setup_entry(
         _LOGGER.info(
             "[button.async_setup_entry] setting up Platform.BUTTON for %s Switch Ports",
             n_poe_ports,
-        )
-
-        entities.append(
-            NetgearRebootButtonEntity(
-                coordinator=coordinator_switch_infos,
-                hub=gs_switch,
-                entity_description=NetgearButtonEntityDescription(
-                    key="reboot",
-                    name="Reboot Switch",
-                    device_class=ButtonDeviceClass.RESTART,
-                ),
-            )
         )
 
         if n_poe_ports > 0:
