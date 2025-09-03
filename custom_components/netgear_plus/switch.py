@@ -11,6 +11,7 @@ from .netgear_entities import (
     NetgearBinarySensorEntityDescription,
     NetgearLedSwitchEntity,
     NetgearPOESwitchEntity,
+    NetgearPortSwitchEntity,
 )
 
 _LOGGER = logging.getLogger(__name__)
@@ -46,6 +47,24 @@ async def async_setup_entry(
             )
 
             entities.append(switch_entity)
+
+    if gs_switch.api and gs_switch.api.ports:
+        _LOGGER.info(
+            "[switch.async_setup_entry] setting up Port switches for %s ports",
+            gs_switch.api.ports,
+        )
+        for port_nr in range(1, gs_switch.api.ports + 1):
+            port_switch = NetgearPortSwitchEntity(
+                coordinator=coordinator_switch_infos,
+                hub=gs_switch,
+                entity_description=NetgearBinarySensorEntityDescription(
+                    key=f"port_{port_nr}_status",
+                    name=f"Port {port_nr}",
+                    device_class=SwitchDeviceClass.SWITCH,
+                ),
+                port_nr=port_nr,
+            )
+            entities.append(port_switch)
 
     if gs_switch.api and gs_switch.api.switch_model.has_led_switch():  # type: ignore call-issue
         _LOGGER.info(

@@ -328,6 +328,61 @@ for port {self.port_nr} failed"
             await self.coordinator.async_request_refresh()
 
 
+class NetgearPortSwitchEntity(NetgearAPICoordinatorEntity, SwitchEntity):
+    """Represents a regular port switch in Home Assistant."""
+
+    def __init__(self, coordinator, hub, entity_description, port_nr):
+        super().__init__(coordinator, hub)
+        self.entity_description = entity_description
+        self.port_nr = port_nr
+        self._name = f"{hub.device_name} {entity_description.name}"
+        self._unique_id = (
+            f"{hub.unique_id}-{entity_description.key}-{entity_description.index}"
+        )
+        self._value = None
+        self.hub = hub
+
+    @callback
+    def async_update_device(self) -> None:
+        """Update port state from coordinator data."""
+        if self.coordinator.data:
+            self._value = self.coordinator.data.get(self.entity_description.key)
+
+    @property
+    def is_on(self) -> bool:
+        """Return true if port is enabled."""
+        return self._value == "on"
+
+    @property
+    def extra_state_attributes(self) -> dict[str, Any]:
+        """Expose description and flow control as attributes."""
+        attrs: dict[str, Any] = {}
+        data = self.coordinator.data or {}
+        attrs["description"] = data.get(f"port_{self.port_nr}_description")
+        attrs["flow_control"] = data.get(f"port_{self.port_nr}_flow_control")
+        attrs["connection_speed"] = data.get(f"port_{self.port_nr}_connection_speed")
+        attrs["modus_speed"] = data.get(f"port_{self.port_nr}_modus_speed")
+        return attrs
+
+    async def async_turn_on(self, **kwargs) -> None:
+        """Enable the port (SPEED=Auto)."""
+        if self.port_nr:
+            success = await self.hub.hass.async_add_executor_job(
+                self.hub.api.turn_on_port, self.port_nr
+            )
+            self._value = "on" if success else "off"
+            await self.coordinator.async_request_refresh()
+
+    async def async_turn_off(self, **kwargs) -> None:
+        """Disable the port (SPEED=Disable)."""
+        if self.port_nr:
+            success = await self.hub.hass.async_add_executor_job(
+                self.hub.api.turn_off_port, self.port_nr
+            )
+            self._value = "off" if success else "on"
+            await self.coordinator.async_request_refresh()
+
+
 class NetgearRebootButtonEntity(NetgearCoordinatorEntity, ButtonEntity):
     """Represents a reboot Button in HomeAssistant."""
 
