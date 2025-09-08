@@ -350,8 +350,8 @@ class NetgearPortSwitchEntity(NetgearAPICoordinatorEntity, SwitchEntity):
 
     @property
     def is_on(self) -> bool:
-        """Return true if port is enabled."""
-        return self._value == "on"
+        """(`True` when speed mode is Auto)."""
+        return bool(self._value)
 
     @property
     def extra_state_attributes(self) -> dict[str, Any]:

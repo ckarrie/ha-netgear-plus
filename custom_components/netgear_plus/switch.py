@@ -58,7 +58,7 @@ async def async_setup_entry(
                 coordinator=coordinator_switch_infos,
                 hub=gs_switch,
                 entity_description=NetgearBinarySensorEntityDescription(
-                    key=f"port_{port_nr}_status",
+                    key=f"port_{port_nr}_modus_speed",
                     name=f"Port {port_nr}",
                     device_class=SwitchDeviceClass.SWITCH,
                 ),
