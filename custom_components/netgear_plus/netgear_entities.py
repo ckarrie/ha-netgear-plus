@@ -268,7 +268,7 @@ unique_id={self._unique_id} port_nr={self.port_nr}>"
     async def async_turn_off(self, **kwargs: dict[str, Any]) -> None:  # noqa: ARG002
         """Disable power on PoE port."""
         if self.port_nr:
-            successful = self.hub.hass.async_add_executor_job(
+            successful = await self.hub.hass.async_add_executor_job(
                 self.hub.api.turn_off_poe_port, self.port_nr
             )
             self._value = "off" if successful else "on"
@@ -335,7 +335,7 @@ class NetgearPortSwitchEntity(NetgearAPICoordinatorEntity, SwitchEntity):
         super().__init__(coordinator, hub)
         self.entity_description = entity_description
         self.port_nr = port_nr
-        self._name = f"{hub.device_name} {entity_description.name}"
+        self._attr_has_entity_name = True
         self._unique_id = (
             f"{hub.unique_id}-{entity_description.key}-{entity_description.index}"
         )
@@ -354,32 +354,28 @@ class NetgearPortSwitchEntity(NetgearAPICoordinatorEntity, SwitchEntity):
         return bool(self._value)
 
     @property
-    def extra_state_attributes(self) -> dict[str, Any]:
-        """Expose description and flow control as attributes."""
-        attrs: dict[str, Any] = {}
+    def name( self ) -> str:
+        """Return dynamic entity name with optional description."""
+        base = self.entity_description.name
         data = self.coordinator.data or {}
-        attrs["description"] = data.get(f"port_{self.port_nr}_description")
-        attrs["flow_control"] = data.get(f"port_{self.port_nr}_flow_control")
-        attrs["connection_speed"] = data.get(f"port_{self.port_nr}_connection_speed")
-        attrs["modus_speed"] = data.get(f"port_{self.port_nr}_modus_speed")
-        return attrs
+        port_status = data.get("port_status") or {}
+        desc = (port_status.get(self.port_nr, {}).get("description") or "").strip()
+        return f"{base} ({desc})" if desc else base
 
     async def async_turn_on(self, **kwargs) -> None:
         """Enable the port (SPEED=Auto)."""
         if self.port_nr:
-            success = await self.hub.hass.async_add_executor_job(
+            await self.hub.hass.async_add_executor_job(
                 self.hub.api.turn_on_port, self.port_nr
             )
-            self._value = "on" if success else "off"
             await self.coordinator.async_request_refresh()
 
     async def async_turn_off(self, **kwargs) -> None:
         """Disable the port (SPEED=Disable)."""
         if self.port_nr:
-            success = await self.hub.hass.async_add_executor_job(
+            await self.hub.hass.async_add_executor_job(
                 self.hub.api.turn_off_port, self.port_nr
             )
-            self._value = "off" if success else "on"
             await self.coordinator.async_request_refresh()
 
 
@@ -486,7 +482,9 @@ class NetgearLedSwitchEntity(NetgearAPICoordinatorEntity, SwitchEntity):
 
     async def async_turn_off(self, **kwargs: dict[str, Any]) -> None:  # noqa: ARG002
         """Disable power on PoE port."""
-        successful = self.hub.hass.async_add_executor_job(self.hub.api.turn_off_leds)
+        successful = await self.hub.hass.async_add_executor_job(
+            self.hub.api.turn_off_leds
+        )
         self._value = "off" if successful else "on"
         _LOGGER.info(
             "called turn_off_leds for uid=%s: successful=%s",
