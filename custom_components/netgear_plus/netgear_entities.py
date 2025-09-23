@@ -335,7 +335,6 @@ class NetgearPortSwitchEntity(NetgearAPICoordinatorEntity, SwitchEntity):
         super().__init__(coordinator, hub)
         self.entity_description = entity_description
         self.port_nr = port_nr
-        self._attr_has_entity_name = True
         self._unique_id = (
             f"{hub.unique_id}-{entity_description.key}-{entity_description.index}"
         )
@@ -355,11 +354,9 @@ class NetgearPortSwitchEntity(NetgearAPICoordinatorEntity, SwitchEntity):
 
     @property
     def name( self ) -> str:
-        """Return dynamic entity name with optional description."""
         base = self.entity_description.name
         data = self.coordinator.data or {}
-        port_status = data.get("port_status") or {}
-        desc = (port_status.get(self.port_nr, {}).get("description") or "").strip()
+        desc = (data.get(f"port_{self.port_nr}_description") or "").strip()
         return f"{base} ({desc})" if desc else base
 
     async def async_turn_on(self, **kwargs) -> None:
