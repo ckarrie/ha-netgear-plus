@@ -11,6 +11,8 @@ Grabs statistical network data from [supported NETGEAR Switches](#supported-and-
 Web interface and not through SNMP or cli. This integration uses web scraping to collect the switch configuration, statistics and
 some basic configuration updates.
 
+Specific instructions for MS108EUP.md can be found here: https://github.com/ripple7511/ha-netgear-plus/blob/main/INSTALL_MS108EUP.md
+
 ## How it works
 
 1. Detecting Switch Model/Product in login.cgi
