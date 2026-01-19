@@ -10,7 +10,10 @@
       }
     },
     "error": {
-      "config": "Connection or login error: please check your configuration"
+      "config": "Connection or login error: please check your configuration",
+      "max_sessions": "Maximum number of sessions reached on the switch. Please log out of the switch's web interface or restart the switch and try again.",
+      "timeout": "Connection timed out. Please check the switch is reachable.",
+      "not_implemented_error": "This switch model is not supported."
     },
     "abort": {
       "already_configured": "[%key:common::config_flow::abort::already_configured_device%]"
