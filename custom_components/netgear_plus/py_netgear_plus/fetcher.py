@@ -10,12 +10,12 @@ import requests.cookies
 from lxml import html
 from requests import Response
 
-from py_netgear_plus.models import (
+from .models import (
     AutodetectedSwitchModel,
     InvalidCryptFunctionError,
     SwitchModelNotDetectedError,
 )
-from py_netgear_plus.netgear_crypt import hex_hmac_md5, merge_hash
+from .netgear_crypt import hex_hmac_md5, merge_hash
 
 DEFAULT_PAGE = "index.htm"
 URL_REQUEST_TIMEOUT = 15
@@ -33,6 +33,10 @@ class PageFetcherConnectionError(Exception):
 
 class LoginFailedError(Exception):
     """Invalid credentials."""
+
+
+class MaxSessionsError(Exception):
+    """Maximum number of sessions reached on the switch."""
 
 
 class NotLoggedInError(Exception):

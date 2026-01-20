@@ -9,6 +9,7 @@ from typing import Any
 from .fetcher import (
     BaseResponse,
     LoginFailedError,
+    MaxSessionsError,
     NotLoggedInError,
     PageFetcher,
     PageFetcherConnectionError,
@@ -215,6 +216,20 @@ class NetgearSwitchConnector:
 
         # Handling Error Messages
         error_msg = self._page_parser.parse_error(response)
+        response_text = response.content.decode("utf-8").lower()
+
+        # Check for maximum sessions error
+        if "maximum" in response_text and "session" in response_text:
+            _LOGGER.warning(
+                "[NetgearSwitchConnector.handle_soft_authentication_failure]"
+                " [IP: %s] Maximum sessions reached on switch",
+                self.host,
+            )
+            raise MaxSessionsError(
+                "Maximum number of sessions reached. "
+                "Please log out of the switch's web interface or restart the switch."
+            )
+
         if error_msg:
             _LOGGER.warning(
                 "[NetgearSwitchConnector.handle_soft_authentication_failure]"
@@ -440,9 +455,35 @@ class NetgearSwitchConnector:
 
         if len(self.switch_model.POE_PORTS):
             time.sleep(self.sleep_time)
-            switch_data.update(self._get_poe_port_config())
+            try:
+                switch_data.update(self._get_poe_port_config())
+            except PageNotLoadedError:
+                _LOGGER.warning(
+                    "[NetgearSwitchConnector.get_switch_infos] "
+                    "Failed to fetch PoE port config for %s, skipping",
+                    self.host,
+                )
+            except PageFetcherConnectionError:
+                _LOGGER.warning(
+                    "[NetgearSwitchConnector.get_switch_infos] "
+                    "Connection error fetching PoE port config for %s, skipping",
+                    self.host,
+                )
             time.sleep(self.sleep_time)
-            switch_data.update(self._get_poe_port_status())
+            try:
+                switch_data.update(self._get_poe_port_status())
+            except PageNotLoadedError:
+                _LOGGER.warning(
+                    "[NetgearSwitchConnector.get_switch_infos] "
+                    "Failed to fetch PoE port status for %s, skipping",
+                    self.host,
+                )
+            except PageFetcherConnectionError:
+                _LOGGER.warning(
+                    "[NetgearSwitchConnector.get_switch_infos] "
+                    "Connection error fetching PoE port status for %s, skipping",
+                    self.host,
+                )
 
         # set previous data
         self._previous_timestamp = time.perf_counter()

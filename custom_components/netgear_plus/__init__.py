@@ -88,8 +88,21 @@ async def async_setup_entry(
     return True
 
 
-async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+async def async_unload_entry(
+    hass: HomeAssistant, entry: NetgearSwitchConfigEntry
+) -> bool:
     """Unload a config entry."""
+    # Logout from the switch to free up the session
+    if hasattr(entry, "runtime_data") and entry.runtime_data:
+        gs_switch = entry.runtime_data.gs_switch
+        try:
+            await gs_switch.async_logout()
+            _LOGGER.debug("Successfully logged out from switch %s", gs_switch.device_name)
+        except Exception:  # noqa: BLE001
+            _LOGGER.debug(
+                "Failed to logout from switch %s (may already be disconnected)",
+                gs_switch.device_name,
+            )
     return await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
 
 

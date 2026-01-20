@@ -2,7 +2,7 @@
 
 from typing import ClassVar
 
-from py_netgear_plus.utils import get_all_child_classes_list
+from .utils import get_all_child_classes_list
 
 
 class MultipleModelsDetectedError(Exception):

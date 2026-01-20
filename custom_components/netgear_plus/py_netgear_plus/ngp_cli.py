@@ -43,12 +43,12 @@ from pathlib import Path
 from sys import stderr
 from typing import Any
 
-from py_netgear_plus import (
+from . import (
     LoginFailedError,
     NetgearSwitchConnector,
     SwitchModelNotDetectedError,
 )
-from py_netgear_plus import (
+from . import (
     __version__ as ngp_version,
 )
 

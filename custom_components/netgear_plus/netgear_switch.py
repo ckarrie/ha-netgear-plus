@@ -97,6 +97,13 @@ class HomeAssistantNetgearSwitch:
         async with self.api_lock:
             return await self.hass.async_add_executor_job(self.api.get_switch_infos)  # type: ignore[attr-defined]
 
+    async def async_logout(self) -> bool:
+        """Logout from the switch to free up the session."""
+        if self.api is None:
+            return False
+        async with self.api_lock:
+            return await self.hass.async_add_executor_job(self.api.delete_login_cookie)
+
 
 class NetgearCoordinatorEntity(CoordinatorEntity):
     """Base class for a Netgear router entity."""
