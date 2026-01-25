@@ -314,8 +314,13 @@ class PageFetcher:
             )
         try:
             response = requests.request(method, url, **kwargs)  # noqa: S113
-        except requests.exceptions.Timeout:
-            return response
+        except requests.exceptions.Timeout as error:
+            _LOGGER.debug(
+                "[PageFetcher.request] Request to %s timed out after %d seconds",
+                url,
+                timeout,
+            )
+            raise PageFetcherConnectionError from error
         except requests.exceptions.ConnectionError as error:
             raise PageFetcherConnectionError from error
         except requests.exceptions.ChunkedEncodingError as error:

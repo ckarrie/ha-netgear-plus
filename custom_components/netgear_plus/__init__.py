@@ -22,10 +22,13 @@ from .const import (
     PLATFORMS,
     SCAN_INTERVAL,
 )
-from .errors import CannotLoginError
+from .errors import CannotLoginError, MaxSessionsError
 from .netgear_switch import HomeAssistantNetgearSwitch
 
 _LOGGER = logging.getLogger(__name__)
+
+# Retry delay when max sessions error occurs (in seconds)
+MAX_SESSIONS_RETRY_DELAY = 120  # 2 minutes
 
 SCAN_INTERVAL_TIMEDELTA = timedelta(seconds=SCAN_INTERVAL)
 
@@ -48,6 +51,17 @@ async def async_setup_entry(
     try:
         if not await gs_switch.async_setup():
             raise ConfigEntryNotReady
+    except MaxSessionsError as ex:
+        _LOGGER.warning(
+            "Maximum sessions reached on switch %s. "
+            "Will retry in %d seconds. "
+            "Consider restarting the switch to clear stale sessions.",
+            entry.data[CONF_HOST],
+            MAX_SESSIONS_RETRY_DELAY,
+        )
+        raise ConfigEntryNotReady(
+            f"Max sessions reached, retry in {MAX_SESSIONS_RETRY_DELAY}s"
+        ) from ex
     except CannotLoginError as ex:
         raise ConfigEntryNotReady from ex
 

@@ -10,7 +10,7 @@ DOMAIN = "netgear_plus"
 PLATFORMS = [Platform.BINARY_SENSOR, Platform.SENSOR, Platform.SWITCH, Platform.BUTTON]
 
 DEFAULT_NAME = "Netgear Plus Switch"
-SCAN_INTERVAL = 10
+SCAN_INTERVAL = 30
 DEFAULT_CONF_TIMEOUT = timedelta(seconds=15)
 DEFAULT_HOST = "192.168.178.5"
 DEFAULT_USER = "admin"

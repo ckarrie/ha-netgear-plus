@@ -402,6 +402,7 @@ class NetgearSwitchConnector:
     def fetch_page_from_templates(self, templates: list) -> Response | BaseResponse:
         """Return response for 1st successful request from templates."""
         response = BaseResponse()
+        last_status_code = None
         for template in templates:
             url = template["url"].format(ip=self.host)
             method = template["method"]
@@ -409,9 +410,20 @@ class NetgearSwitchConnector:
             if not self.get_offline_mode():
                 self._page_fetcher.set_data_from_template(template, self, data)
             response = self.fetch_page(method, url, data)
+            last_status_code = response.status_code
             if self._page_fetcher.has_ok_status(response):
                 return response
-        message = f"Failed to load any page of templates: {templates}"
+            _LOGGER.debug(
+                "[NetgearSwitchConnector.fetch_page_from_templates] "
+                "%s %s returned status %s",
+                method.upper(),
+                url,
+                response.status_code,
+            )
+        message = (
+            f"Failed to load any page of templates (last status={last_status_code}): "
+            f"{templates}"
+        )
         raise PageNotLoadedError(message)
 
     def get_switch_infos(self) -> dict[str, Any]:
@@ -457,32 +469,40 @@ class NetgearSwitchConnector:
             time.sleep(self.sleep_time)
             try:
                 switch_data.update(self._get_poe_port_config())
-            except PageNotLoadedError:
+            except PageNotLoadedError as e:
                 _LOGGER.warning(
                     "[NetgearSwitchConnector.get_switch_infos] "
-                    "Failed to fetch PoE port config for %s, skipping",
+                    "Failed to fetch PoE port config for %s: %s (gambit=%s, cookie=%s)",
                     self.host,
+                    str(e),
+                    self._gambit[:20] + "..." if self._gambit else None,
+                    self.get_cookie(),
                 )
-            except PageFetcherConnectionError:
+            except PageFetcherConnectionError as e:
                 _LOGGER.warning(
                     "[NetgearSwitchConnector.get_switch_infos] "
-                    "Connection error fetching PoE port config for %s, skipping",
+                    "Connection error fetching PoE port config for %s: %s",
                     self.host,
+                    str(e),
                 )
             time.sleep(self.sleep_time)
             try:
                 switch_data.update(self._get_poe_port_status())
-            except PageNotLoadedError:
+            except PageNotLoadedError as e:
                 _LOGGER.warning(
                     "[NetgearSwitchConnector.get_switch_infos] "
-                    "Failed to fetch PoE port status for %s, skipping",
+                    "Failed to fetch PoE port status for %s: %s (gambit=%s, cookie=%s)",
                     self.host,
+                    str(e),
+                    self._gambit[:20] + "..." if self._gambit else None,
+                    self.get_cookie(),
                 )
-            except PageFetcherConnectionError:
+            except PageFetcherConnectionError as e:
                 _LOGGER.warning(
                     "[NetgearSwitchConnector.get_switch_infos] "
-                    "Connection error fetching PoE port status for %s, skipping",
+                    "Connection error fetching PoE port status for %s: %s",
                     self.host,
+                    str(e),
                 )
 
         # set previous data
@@ -768,15 +788,30 @@ class NetgearSwitchConnector:
             data = self.switch_model.get_switch_led_data(state)  # type: ignore[report-call-issue]
             self._page_fetcher.set_data_from_template(template, self, data)
             _LOGGER.debug("switch_leds data=%s", data)
-            response = BaseResponse
+            response = BaseResponse()
             try:
                 response = self._page_fetcher.request(method, url, data)
             except NotLoggedInError as error:
                 if self.get_login_cookie():
-                    response = self._page_fetcher.request(method, url, data)
+                    try:
+                        response = self._page_fetcher.request(method, url, data)
+                    except PageFetcherConnectionError:
+                        _LOGGER.warning(
+                            "Connection error switching LEDs to %s on %s (after re-login)",
+                            state,
+                            self.host,
+                        )
+                        return False
                 else:
                     message = "Not logged in and unable to login."
                     raise LoginFailedError(message) from error
+            except PageFetcherConnectionError:
+                _LOGGER.warning(
+                    "Connection error switching LEDs to %s on %s",
+                    state,
+                    self.host,
+                )
+                return False
             if (
                 self._page_fetcher.has_ok_status(response)
                 and str(response.content.strip()) == "b'SUCCESS'"
@@ -809,15 +844,33 @@ class NetgearSwitchConnector:
                 data = self.switch_model.get_switch_poe_port_data(poe_port, state)  # type: ignore[report-call-issue]
                 self._page_fetcher.set_data_from_template(template, self, data)
                 _LOGGER.debug("switch_poe_port data=%s", data)
-                response = BaseResponse
+                response = BaseResponse()
                 try:
                     response = self._page_fetcher.request("post", url, data)
                 except NotLoggedInError as error:
                     if self.get_login_cookie():
-                        response = self._page_fetcher.request("post", url, data)
+                        try:
+                            response = self._page_fetcher.request("post", url, data)
+                        except PageFetcherConnectionError:
+                            _LOGGER.warning(
+                                "Connection error switching PoE port %d to %s on %s "
+                                "(after re-login)",
+                                poe_port,
+                                state,
+                                self.host,
+                            )
+                            return False
                     else:
                         message = "Not logged in and unable to login."
                         raise LoginFailedError(message) from error
+                except PageFetcherConnectionError:
+                    _LOGGER.warning(
+                        "Connection error switching PoE port %d to %s on %s",
+                        poe_port,
+                        state,
+                        self.host,
+                    )
+                    return False
                 if (
                     self._page_fetcher.has_ok_status(response)
                     and str(response.content.strip()) == "b'SUCCESS'"
@@ -847,16 +900,32 @@ class NetgearSwitchConnector:
                 url = template["url"].format(ip=self.host)
                 data = self.switch_model.get_power_cycle_poe_port_data(poe_port)  # type: ignore[report-call-issue]
                 self._page_fetcher.set_data_from_template(template, self, data)
-                response = Response
+                response = BaseResponse()
                 method = template["method"]
                 try:
                     response = self._page_fetcher.request(method, url, data)
                 except NotLoggedInError as error:
                     if self.get_login_cookie():
-                        response = self._page_fetcher.request(method, url, data)
+                        try:
+                            response = self._page_fetcher.request(method, url, data)
+                        except PageFetcherConnectionError:
+                            _LOGGER.warning(
+                                "Connection error power cycling PoE port %d on %s "
+                                "(after re-login)",
+                                poe_port,
+                                self.host,
+                            )
+                            return False
                     else:
                         message = "Not logged in and unable to login."
                         raise LoginFailedError(message) from error
+                except PageFetcherConnectionError:
+                    _LOGGER.warning(
+                        "Connection error power cycling PoE port %d on %s",
+                        poe_port,
+                        self.host,
+                    )
+                    return False
 
                 if (
                     self._page_fetcher.has_ok_status(response)
