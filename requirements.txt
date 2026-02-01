@@ -1,4 +1,4 @@
-colorlog==6.9.0
+colorlog==6.10.1
 homeassistant>=2024.12.5
 lxml>=4.6.1
 py-netgear-plus==v0.4.7
