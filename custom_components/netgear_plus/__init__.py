@@ -22,10 +22,13 @@ from .const import (
     PLATFORMS,
     SCAN_INTERVAL,
 )
-from .errors import CannotLoginError
+from .errors import CannotLoginError, MaxSessionsError
 from .netgear_switch import HomeAssistantNetgearSwitch
 
 _LOGGER = logging.getLogger(__name__)
+
+# Retry delay when max sessions error occurs (in seconds)
+MAX_SESSIONS_RETRY_DELAY = 120  # 2 minutes
 
 SCAN_INTERVAL_TIMEDELTA = timedelta(seconds=SCAN_INTERVAL)
 
@@ -48,6 +51,17 @@ async def async_setup_entry(
     try:
         if not await gs_switch.async_setup():
             raise ConfigEntryNotReady
+    except MaxSessionsError as ex:
+        _LOGGER.warning(
+            "Maximum sessions reached on switch %s. "
+            "Will retry in %d seconds. "
+            "Consider restarting the switch to clear stale sessions.",
+            entry.data[CONF_HOST],
+            MAX_SESSIONS_RETRY_DELAY,
+        )
+        raise ConfigEntryNotReady(
+            f"Max sessions reached, retry in {MAX_SESSIONS_RETRY_DELAY}s"
+        ) from ex
     except CannotLoginError as ex:
         raise ConfigEntryNotReady from ex
 
@@ -88,8 +102,21 @@ async def async_setup_entry(
     return True
 
 
-async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+async def async_unload_entry(
+    hass: HomeAssistant, entry: NetgearSwitchConfigEntry
+) -> bool:
     """Unload a config entry."""
+    # Logout from the switch to free up the session
+    if hasattr(entry, "runtime_data") and entry.runtime_data:
+        gs_switch = entry.runtime_data.gs_switch
+        try:
+            await gs_switch.async_logout()
+            _LOGGER.debug("Successfully logged out from switch %s", gs_switch.device_name)
+        except Exception:  # noqa: BLE001
+            _LOGGER.debug(
+                "Failed to logout from switch %s (may already be disconnected)",
+                gs_switch.device_name,
+            )
     return await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
 
 

@@ -20,3 +20,9 @@ coverage.xml
 # Home Assistant configuration
 config/*
 !config/configuration.yaml
+
+# macOS
+.DS_Store
+
+# Personal project documentation (contains local IPs)
+netgear-ms108eup-project.md

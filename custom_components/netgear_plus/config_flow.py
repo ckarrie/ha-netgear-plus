@@ -20,7 +20,7 @@ if TYPE_CHECKING:
     from homeassistant.config_entries import ConfigFlowResult
 
 from .const import DEFAULT_CONF_TIMEOUT, DEFAULT_HOST, DOMAIN
-from .errors import CannotLoginError
+from .errors import CannotLoginError, MaxSessionsError
 from .netgear_switch import get_api
 
 _LOGGER = logging.getLogger(__name__)
@@ -166,6 +166,8 @@ class NetgearFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
             api = await self.hass.async_add_executor_job(get_api, host, password)
         except CannotLoginError:
             errors["base"] = "config"
+        except MaxSessionsError:
+            errors["base"] = "max_sessions"
         except requests.exceptions.ConnectTimeout:
             errors["base"] = "timeout"
         except NotImplementedError:

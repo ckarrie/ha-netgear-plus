@@ -258,6 +258,7 @@ unique_id={self._unique_id} port_nr={self.port_nr}>"
                 self.hub.api.turn_on_poe_port, self.port_nr
             )
             self._value = "on" if successful else "off"
+            self.async_write_ha_state()
             _LOGGER.info(
                 "called turn_on_poe_port for uid=%s port=%s: successful=%s",
                 self._unique_id,
@@ -268,10 +269,11 @@ unique_id={self._unique_id} port_nr={self.port_nr}>"
     async def async_turn_off(self, **kwargs: dict[str, Any]) -> None:  # noqa: ARG002
         """Disable power on PoE port."""
         if self.port_nr:
-            successful = self.hub.hass.async_add_executor_job(
+            successful = await self.hub.hass.async_add_executor_job(
                 self.hub.api.turn_off_poe_port, self.port_nr
             )
             self._value = "off" if successful else "on"
+            self.async_write_ha_state()
             _LOGGER.info(
                 "called turn_off_poe_port for uid=%s port=%s: successful=%s",
                 self._unique_id,
@@ -423,6 +425,7 @@ class NetgearLedSwitchEntity(NetgearAPICoordinatorEntity, SwitchEntity):
             self.hub.api.turn_on_leds
         )
         self._value = "on" if successful else "off"
+        self.async_write_ha_state()
         _LOGGER.info(
             "called turn_on_leds for uid=%s: successful=%s",
             self._unique_id,
@@ -430,9 +433,12 @@ class NetgearLedSwitchEntity(NetgearAPICoordinatorEntity, SwitchEntity):
         )
 
     async def async_turn_off(self, **kwargs: dict[str, Any]) -> None:  # noqa: ARG002
-        """Disable power on PoE port."""
-        successful = self.hub.hass.async_add_executor_job(self.hub.api.turn_off_leds)
+        """Disable front panel LEDs."""
+        successful = await self.hub.hass.async_add_executor_job(
+            self.hub.api.turn_off_leds
+        )
         self._value = "off" if successful else "on"
+        self.async_write_ha_state()
         _LOGGER.info(
             "called turn_off_leds for uid=%s: successful=%s",
             self._unique_id,
