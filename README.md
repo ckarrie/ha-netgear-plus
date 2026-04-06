@@ -79,7 +79,7 @@ some basic configuration updates.
 | GS316EPP  | 16    | V1.0.4.4                               |                     |
 | JGS516PE  | 16    | V2.6.0.48                              |                     |
 | JGS24Ev2  | 24    | V2.6.0.48                              |                     |
-| MS305E    | 5     | ?                                      |                     |
+| MS305E    | 5     | v1.0.0.9                               |                     |
 | MS308E    | 8     | v1.0.0.9                               |                     |
 | XS512EM   | 12    | V1.0.2.8                               |                     |
 
