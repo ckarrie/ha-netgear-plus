@@ -362,17 +362,39 @@ class NetgearPortSwitchEntity(NetgearAPICoordinatorEntity, SwitchEntity):
     async def async_turn_on(self, **kwargs) -> None:
         """Enable the port (SPEED=Auto)."""
         if self.port_nr:
-            await self.hub.hass.async_add_executor_job(
+            successful = await self.hub.hass.async_add_executor_job(
                 self.hub.api.turn_on_port, self.port_nr
             )
+            self._value = True if successful else False
+            self.async_write_ha_state()
+            _LOGGER.info(
+                "called turn_on_port for uid=%s port=%s: successful=%s",
+                self._unique_id,
+                self.port_nr,
+                successful,
+            )
+            if not successful:
+                message = f"Running command 'turn_on_port' for port {self.port_nr} failed"
+                raise HomeAssistantError(message)
             await self.coordinator.async_request_refresh()
 
     async def async_turn_off(self, **kwargs) -> None:
         """Disable the port (SPEED=Disable)."""
         if self.port_nr:
-            await self.hub.hass.async_add_executor_job(
+            successful = await self.hub.hass.async_add_executor_job(
                 self.hub.api.turn_off_port, self.port_nr
             )
+            self._value = False if successful else True
+            self.async_write_ha_state()
+            _LOGGER.info(
+                "called turn_off_port for uid=%s port=%s: successful=%s",
+                self._unique_id,
+                self.port_nr,
+                successful,
+            )
+            if not successful:
+                message = f"Running command 'turn_off_port' for port {self.port_nr} failed"
+                raise HomeAssistantError(message)
             await self.coordinator.async_request_refresh()
 
 
