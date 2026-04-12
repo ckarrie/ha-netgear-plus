@@ -8,6 +8,7 @@ from typing import TYPE_CHECKING
 
 from homeassistant.components.sensor.const import (
     SensorDeviceClass,
+    SensorStateClass,
 )
 
 if TYPE_CHECKING:
@@ -141,6 +142,7 @@ POE_STATUS_TEMPLATE = OrderedDict(
     {
         "port_{port}_poe_output_power": {
             "name": "Port {port} PoE Output Power",
+            "state_class": SensorStateClass.MEASUREMENT,
             "native_unit_of_measurement": UnitOfPower.WATT,
             "device_class": SensorDeviceClass.POWER,
             "icon": "mdi:flash",
@@ -232,6 +234,7 @@ async def async_setup_entry(
                     {
                         "key": port_sensor_key.format(port=poe_port),
                         "name": port_sensor_data["name"].format(port=poe_port),
+                        "state_class": SensorStateClass.MEASUREMENT,
                         "native_unit_of_measurement": port_sensor_data.get(
                             "native_unit_of_measurement", None
                         ),
