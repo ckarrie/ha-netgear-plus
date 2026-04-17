@@ -11,7 +11,7 @@
   "issue_tracker": "https://github.com/ckarrie/ha-netgear-plus/issues",
   "requirements": [
     "lxml>=4.6.1",
-    "py-netgear-plus==v0.5.1"
+    "py-netgear-plus==v0.6.1"
   ],
   "ssdp": [
     {
@@ -19,5 +19,5 @@
       "deviceType": "urn:schemas-upnp-org:device:InternetGatewayDevice:1"
     }
   ],
-  "version": "0.7.11pre1"
+  "version": "0.7.11pre2"
 }
