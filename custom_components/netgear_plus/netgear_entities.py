@@ -331,7 +331,16 @@ for port {self.port_nr} failed"
 class NetgearPortSwitchEntity(NetgearAPICoordinatorEntity, SwitchEntity):
     """Represents a regular port switch in Home Assistant."""
 
-    def __init__(self, coordinator, hub, entity_description, port_nr):
+    entity_description: NetgearBinarySensorEntityDescription
+
+    def __init__(
+        self,
+        coordinator: DataUpdateCoordinator,
+        hub: HomeAssistantNetgearSwitch,
+        entity_description: NetgearBinarySensorEntityDescription,
+        port_nr: int | None = None,
+    ) -> None:
+        """Initialize a regular switch port entity."""
         super().__init__(coordinator, hub)
         self.entity_description = entity_description
         self.port_nr = port_nr
@@ -353,19 +362,23 @@ class NetgearPortSwitchEntity(NetgearAPICoordinatorEntity, SwitchEntity):
         return bool(self._value)
 
     @property
-    def name( self ) -> str:
+    def name(self) -> str:
+        """Return the port name, including the configured description."""
         base = self.entity_description.name
         data = self.coordinator.data or {}
         desc = (data.get(f"port_{self.port_nr}_description") or "").strip()
         return f"{base} ({desc})" if desc else base
 
-    async def async_turn_on(self, **kwargs) -> None:
+    async def async_turn_on(
+        self,
+        **kwargs: dict[str, Any],  # noqa: ARG002
+    ) -> None:
         """Enable the port (SPEED=Auto)."""
         if self.port_nr:
             successful = await self.hub.hass.async_add_executor_job(
                 self.hub.api.turn_on_port, self.port_nr
             )
-            self._value = True if successful else False
+            self._value = bool(successful)
             self.async_write_ha_state()
             _LOGGER.info(
                 "called turn_on_port for uid=%s port=%s: successful=%s",
@@ -374,17 +387,22 @@ class NetgearPortSwitchEntity(NetgearAPICoordinatorEntity, SwitchEntity):
                 successful,
             )
             if not successful:
-                message = f"Running command 'turn_on_port' for port {self.port_nr} failed"
+                message = (
+                    f"Running command 'turn_on_port' for port {self.port_nr} failed"
+                )
                 raise HomeAssistantError(message)
             await self.coordinator.async_request_refresh()
 
-    async def async_turn_off(self, **kwargs) -> None:
+    async def async_turn_off(
+        self,
+        **kwargs: dict[str, Any],  # noqa: ARG002
+    ) -> None:
         """Disable the port (SPEED=Disable)."""
         if self.port_nr:
             successful = await self.hub.hass.async_add_executor_job(
                 self.hub.api.turn_off_port, self.port_nr
             )
-            self._value = False if successful else True
+            self._value = not successful
             self.async_write_ha_state()
             _LOGGER.info(
                 "called turn_off_port for uid=%s port=%s: successful=%s",
@@ -393,7 +411,9 @@ class NetgearPortSwitchEntity(NetgearAPICoordinatorEntity, SwitchEntity):
                 successful,
             )
             if not successful:
-                message = f"Running command 'turn_off_port' for port {self.port_nr} failed"
+                message = (
+                    f"Running command 'turn_off_port' for port {self.port_nr} failed"
+                )
                 raise HomeAssistantError(message)
             await self.coordinator.async_request_refresh()
 
