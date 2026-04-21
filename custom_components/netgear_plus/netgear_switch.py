@@ -5,6 +5,7 @@ from __future__ import annotations
 import asyncio
 import logging
 from abc import abstractmethod
+from collections.abc import Callable
 from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
@@ -92,13 +93,13 @@ class HomeAssistantNetgearSwitch:
         async with self.api_lock:
             return await self.hass.async_add_executor_job(self.api.get_switch_infos)  # type: ignore[attr-defined]
 
-    async def async_call_api(self, func, *args) -> bool:
-        """Call an API write function under the lock, re-logging in once if the session expired."""
+    async def async_call_api(self, func: Callable[..., bool], *args: Any) -> bool:
+        """Call an API write function under lock, re-logging in if session expired."""
         async with self.api_lock:
             result = await self.hass.async_add_executor_job(func, *args)
             if not result:
                 _LOGGER.info(
-                    "API call %s returned False, session likely expired — attempting re-login",
+                    "API call %s returned False, session may have expired — re-login",
                     func.__name__,
                 )
                 relogged = await self.hass.async_add_executor_job(

@@ -518,7 +518,7 @@ class NetgearLedSwitchEntity(NetgearAPICoordinatorEntity, SwitchEntity):
         )
 
     async def async_turn_off(self, **kwargs: dict[str, Any]) -> None:  # noqa: ARG002
-        """Disable power on PoE port."""
+        """Disable front panel LEDs."""
         successful = await self.hub.async_call_api(self.hub.api.turn_off_leds)
         self._value = "off" if successful else "on"
         _LOGGER.info(
