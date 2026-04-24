@@ -268,7 +268,7 @@ unique_id={self._unique_id} port_nr={self.port_nr}>"
     async def async_turn_off(self, **kwargs: dict[str, Any]) -> None:  # noqa: ARG002
         """Disable power on PoE port."""
         if self.port_nr:
-            successful = self.hub.hass.async_add_executor_job(
+            successful = await self.hub.hass.async_add_executor_job(
                 self.hub.api.turn_off_poe_port, self.port_nr
             )
             self._value = "off" if successful else "on"
@@ -325,6 +325,96 @@ unique_id={self._unique_id} port_nr={self.port_nr}>"
 for port {self.port_nr} failed"
                 raise HomeAssistantError(message)
 
+            await self.coordinator.async_request_refresh()
+
+
+class NetgearPortSwitchEntity(NetgearAPICoordinatorEntity, SwitchEntity):
+    """Represents a regular port switch in Home Assistant."""
+
+    entity_description: NetgearBinarySensorEntityDescription
+
+    def __init__(
+        self,
+        coordinator: DataUpdateCoordinator,
+        hub: HomeAssistantNetgearSwitch,
+        entity_description: NetgearBinarySensorEntityDescription,
+        port_nr: int | None = None,
+    ) -> None:
+        """Initialize a regular switch port entity."""
+        super().__init__(coordinator, hub)
+        self.entity_description = entity_description
+        self.port_nr = port_nr
+        self._unique_id = (
+            f"{hub.unique_id}-{entity_description.key}-{entity_description.index}"
+        )
+        self._value = None
+        self.hub = hub
+
+    @callback
+    def async_update_device(self) -> None:
+        """Update port state from coordinator data."""
+        if self.coordinator.data:
+            self._value = self.coordinator.data.get(self.entity_description.key)
+
+    @property
+    def is_on(self) -> bool:
+        """(`True` when speed mode is Auto)."""
+        return bool(self._value)
+
+    @property
+    def name(self) -> str:
+        """Return the port name, including the configured description."""
+        base = self.entity_description.name
+        data = self.coordinator.data or {}
+        desc = (data.get(f"port_{self.port_nr}_description") or "").strip()
+        return f"{base} ({desc})" if desc else base
+
+    async def async_turn_on(
+        self,
+        **kwargs: dict[str, Any],  # noqa: ARG002
+    ) -> None:
+        """Enable the port (SPEED=Auto)."""
+        if self.port_nr:
+            successful = await self.hub.hass.async_add_executor_job(
+                self.hub.api.turn_on_port, self.port_nr
+            )
+            self._value = bool(successful)
+            self.async_write_ha_state()
+            _LOGGER.info(
+                "called turn_on_port for uid=%s port=%s: successful=%s",
+                self._unique_id,
+                self.port_nr,
+                successful,
+            )
+            if not successful:
+                message = (
+                    f"Running command 'turn_on_port' for port {self.port_nr} failed"
+                )
+                raise HomeAssistantError(message)
+            await self.coordinator.async_request_refresh()
+
+    async def async_turn_off(
+        self,
+        **kwargs: dict[str, Any],  # noqa: ARG002
+    ) -> None:
+        """Disable the port (SPEED=Disable)."""
+        if self.port_nr:
+            successful = await self.hub.hass.async_add_executor_job(
+                self.hub.api.turn_off_port, self.port_nr
+            )
+            self._value = not successful
+            self.async_write_ha_state()
+            _LOGGER.info(
+                "called turn_off_port for uid=%s port=%s: successful=%s",
+                self._unique_id,
+                self.port_nr,
+                successful,
+            )
+            if not successful:
+                message = (
+                    f"Running command 'turn_off_port' for port {self.port_nr} failed"
+                )
+                raise HomeAssistantError(message)
             await self.coordinator.async_request_refresh()
 
 
@@ -431,7 +521,9 @@ class NetgearLedSwitchEntity(NetgearAPICoordinatorEntity, SwitchEntity):
 
     async def async_turn_off(self, **kwargs: dict[str, Any]) -> None:  # noqa: ARG002
         """Disable power on PoE port."""
-        successful = self.hub.hass.async_add_executor_job(self.hub.api.turn_off_leds)
+        successful = await self.hub.hass.async_add_executor_job(
+            self.hub.api.turn_off_leds
+        )
         self._value = "off" if successful else "on"
         _LOGGER.info(
             "called turn_off_leds for uid=%s: successful=%s",

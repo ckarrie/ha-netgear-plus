@@ -90,6 +90,11 @@ async def async_setup_entry(
 
 async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Unload a config entry."""
+    # Get the runtime API and log out
+    runtime = getattr(entry, "runtime_data", None)
+    if runtime and runtime.gs_switch.api:
+        await hass.async_add_executor_job(runtime.gs_switch.api.delete_login_cookie)
+    # Unload platforms as usual
     return await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
 
 
