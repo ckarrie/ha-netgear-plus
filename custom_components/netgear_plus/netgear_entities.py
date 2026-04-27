@@ -254,7 +254,7 @@ unique_id={self._unique_id} port_nr={self.port_nr}>"
     async def async_turn_on(self, **kwargs: dict[str, Any]) -> None:  # noqa: ARG002
         """Enable power on PoE port."""
         if self.port_nr:
-            successful = await self.hub.hass.async_add_executor_job(
+            successful = await self.hub.async_call_api(
                 self.hub.api.turn_on_poe_port, self.port_nr
             )
             self._value = "on" if successful else "off"
@@ -268,7 +268,7 @@ unique_id={self._unique_id} port_nr={self.port_nr}>"
     async def async_turn_off(self, **kwargs: dict[str, Any]) -> None:  # noqa: ARG002
         """Disable power on PoE port."""
         if self.port_nr:
-            successful = await self.hub.hass.async_add_executor_job(
+            successful = await self.hub.async_call_api(
                 self.hub.api.turn_off_poe_port, self.port_nr
             )
             self._value = "off" if successful else "on"
@@ -509,9 +509,7 @@ class NetgearLedSwitchEntity(NetgearAPICoordinatorEntity, SwitchEntity):
 
     async def async_turn_on(self, **kwargs: dict[str, Any]) -> None:  # noqa: ARG002
         """Enable front panel LEDs."""
-        successful = await self.hub.hass.async_add_executor_job(
-            self.hub.api.turn_on_leds
-        )
+        successful = await self.hub.async_call_api(self.hub.api.turn_on_leds)
         self._value = "on" if successful else "off"
         _LOGGER.info(
             "called turn_on_leds for uid=%s: successful=%s",
@@ -520,10 +518,8 @@ class NetgearLedSwitchEntity(NetgearAPICoordinatorEntity, SwitchEntity):
         )
 
     async def async_turn_off(self, **kwargs: dict[str, Any]) -> None:  # noqa: ARG002
-        """Disable power on PoE port."""
-        successful = await self.hub.hass.async_add_executor_job(
-            self.hub.api.turn_off_leds
-        )
+        """Disable front panel LEDs."""
+        successful = await self.hub.async_call_api(self.hub.api.turn_off_leds)
         self._value = "off" if successful else "on"
         _LOGGER.info(
             "called turn_off_leds for uid=%s: successful=%s",
