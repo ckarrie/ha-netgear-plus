@@ -10,8 +10,8 @@
   "iot_class": "local_polling",
   "issue_tracker": "https://github.com/ckarrie/ha-netgear-plus/issues",
   "requirements": [
-    "lxml>=4.6.1",
-    "py-netgear-plus==0.6.3"
+    "lxml>=6.1.0",
+    "py-netgear-plus==0.6.4"
   ],
   "ssdp": [
     {
@@ -19,5 +19,5 @@
       "deviceType": "urn:schemas-upnp-org:device:InternetGatewayDevice:1"
     }
   ],
-  "version": "0.7.11pre5"
+  "version": "0.7.11pre6"
 }
