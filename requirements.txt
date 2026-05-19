@@ -3,4 +3,4 @@ homeassistant>=2024.12.5
 lxml>=6.1.0
 py-netgear-plus==0.6.3
 pip>=26.1.1
-ruff==0.15.12
+ruff==0.15.13
