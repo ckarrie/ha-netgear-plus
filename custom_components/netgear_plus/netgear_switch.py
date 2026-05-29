@@ -95,13 +95,7 @@ class HomeAssistantNetgearSwitch:
             return await self.hass.async_add_executor_job(self.api.get_switch_infos)  # type: ignore[attr-defined]
 
     async def async_call_api(self, func: Callable[..., bool], *args: Any) -> bool:
-        """Call an API write function under lock.
-
-        py-netgear-plus write methods already handle session expiry internally:
-        they catch NotLoggedInError, attempt re-login, and raise LoginFailedError
-        if re-login fails. A False return value means the command genuinely failed
-        (non-SUCCESS response), not a session issue.
-        """
+        """Call an API write function under lock."""
         async with self.api_lock:
             try:
                 result = await self.hass.async_add_executor_job(func, *args)
