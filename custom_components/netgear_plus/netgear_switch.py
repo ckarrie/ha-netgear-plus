@@ -18,7 +18,7 @@ from homeassistant.helpers.update_coordinator import (
     CoordinatorEntity,
     DataUpdateCoordinator,
 )
-from py_netgear_plus import NetgearSwitchConnector
+from py_netgear_plus import LoginFailedError, NetgearSwitchConnector
 from py_netgear_plus import __version__ as api_version
 
 from .const import DOMAIN
@@ -95,24 +95,27 @@ class HomeAssistantNetgearSwitch:
             return await self.hass.async_add_executor_job(self.api.get_switch_infos)  # type: ignore[attr-defined]
 
     async def async_call_api(self, func: Callable[..., bool], *args: Any) -> bool:
-        """Call an API write function under lock, re-logging in if session expired."""
+        """Call an API write function under lock.
+
+        py-netgear-plus write methods already handle session expiry internally:
+        they catch NotLoggedInError, attempt re-login, and raise LoginFailedError
+        if re-login fails. A False return value means the command genuinely failed
+        (non-SUCCESS response), not a session issue.
+        """
         async with self.api_lock:
-            result = await self.hass.async_add_executor_job(func, *args)
-            if not result:
-                _LOGGER.info(
-                    "API call %s returned False, session may have expired — re-login",
+            try:
+                result = await self.hass.async_add_executor_job(func, *args)
+            except LoginFailedError:
+                _LOGGER.warning(
+                    "API call %s failed: session expired and re-login failed",
                     func.__name__,
                 )
-                relogged = await self.hass.async_add_executor_job(
-                    self.api.get_login_cookie
+                return False
+            if not result:
+                _LOGGER.warning(
+                    "API call %s returned False: command failed",
+                    func.__name__,
                 )
-                if relogged:
-                    _LOGGER.info("Re-login successful, retrying %s", func.__name__)
-                    result = await self.hass.async_add_executor_job(func, *args)
-                else:
-                    _LOGGER.warning(
-                        "Re-login failed, cannot complete API call %s", func.__name__
-                    )
             return result
 
 
