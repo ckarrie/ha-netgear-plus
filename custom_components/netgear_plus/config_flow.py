@@ -19,6 +19,8 @@ from homeassistant.util.network import is_ipv4_address
 if TYPE_CHECKING:
     from homeassistant.config_entries import ConfigFlowResult
 
+from py_netgear_plus import SwitchModelNotDetectedError
+
 from .const import DEFAULT_CONF_TIMEOUT, DEFAULT_HOST, DOMAIN
 from .errors import CannotLoginError
 from .netgear_switch import get_api
@@ -135,6 +137,8 @@ class NetgearFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
                 get_api,
                 updated_data[CONF_HOST],  # type: ignore[arg-type]
             )
+        except SwitchModelNotDetectedError:
+            return self.async_abort(reason="switch_not_detected")
         except requests.exceptions.ConnectTimeout:
             errors["base"] = "timeout"
         except NotImplementedError:
