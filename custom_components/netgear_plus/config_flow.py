@@ -192,4 +192,3 @@ class NetgearFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
             title=name,
             data=config_data,
         )
-
