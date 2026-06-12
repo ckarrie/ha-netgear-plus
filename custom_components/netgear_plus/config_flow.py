@@ -15,11 +15,11 @@ if TYPE_CHECKING:
 from homeassistant.const import CONF_HOST, CONF_PASSWORD, CONF_TIMEOUT
 from homeassistant.core import callback
 from homeassistant.util.network import is_ipv4_address
+from py_netgear_plus import SwitchModelNotDetectedError
 
 if TYPE_CHECKING:
     from homeassistant.config_entries import ConfigFlowResult
 
-from py_netgear_plus import SwitchModelNotDetectedError
 from .const import DEFAULT_CONF_TIMEOUT, DEFAULT_HOST, DOMAIN
 from .errors import CannotLoginError
 from .netgear_switch import get_api
