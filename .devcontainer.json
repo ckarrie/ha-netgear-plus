@@ -1,5 +1,5 @@
 {
-    "name": "ckarrie/ha-netgear-plus",
+    "name": "s114646/ha-netgear-plus",
     "image": "mcr.microsoft.com/devcontainers/python:dev-3.13",
     "postCreateCommand": "scripts/setup",
     "forwardPorts": [
