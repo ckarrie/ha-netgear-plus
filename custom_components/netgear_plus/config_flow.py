@@ -128,8 +128,11 @@ class NetgearFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
 
         _LOGGER.debug("Netgear ssdp discovery info: %s", discovery_info)
 
+        await self.async_set_unique_id(f"{DOMAIN}_{hostname}")
+        self._abort_if_unique_id_configured()
         self._async_abort_entries_match({CONF_HOST: hostname})
 
+        self.context["title_placeholders"] = {CONF_HOST: hostname}
         self.placeholders.update(updated_data)
         self.discovered = True
 
