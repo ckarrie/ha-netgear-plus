@@ -118,7 +118,6 @@ class NetgearFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
     ) -> ConfigFlowResult:
         """Initialize flow from ssdp."""
         updated_data: dict[str, str | int | bool] = {}
-        errors: dict[str, str] = {}
 
         device_url = urlparse(discovery_info.ssdp_location)
         if hostname := device_url.hostname:
@@ -130,24 +129,12 @@ class NetgearFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
 
         _LOGGER.debug("Netgear ssdp discovery info: %s", discovery_info)
 
-        # Open connection to get unique id
-        try:
-            api = await self.hass.async_add_executor_job(
-                get_api,
-                updated_data[CONF_HOST],  # type: ignore[arg-type]
-            )
-        except SwitchModelNotDetectedError:
-            return self.async_abort(reason="switch_not_detected")
-        except requests.exceptions.ConnectTimeout:
-            errors["base"] = "timeout"
-        except NotImplementedError:
-            errors["base"] = "not_implemented_error"
+        await self.async_set_unique_id(f"{DOMAIN}_{hostname}")
+        self._abort_if_unique_id_configured()
+        self._async_abort_entries_match({CONF_HOST: hostname})
 
-        unique_id = await self.hass.async_add_executor_job(api.get_unique_id)
-        await self.async_set_unique_id(unique_id)
-        self._abort_if_unique_id_configured(updates=updated_data)
-
-        self.placeholders.update(updated_data)  # type: ignore[arg-type]
+        self.context["title_placeholders"] = {CONF_HOST: hostname}
+        self.placeholders.update(updated_data)
         self.discovered = True
 
         return await self.async_step_user()
@@ -169,6 +156,8 @@ class NetgearFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
             api = await self.hass.async_add_executor_job(get_api, host, password)
         except CannotLoginError:
             errors["base"] = "config"
+        except SwitchModelNotDetectedError:
+            errors["base"] = "switch_not_detected"
         except requests.exceptions.ConnectTimeout:
             errors["base"] = "timeout"
         except NotImplementedError:
