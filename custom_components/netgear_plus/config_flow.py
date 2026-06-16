@@ -15,6 +15,7 @@ if TYPE_CHECKING:
 from homeassistant.const import CONF_HOST, CONF_PASSWORD, CONF_TIMEOUT
 from homeassistant.core import callback
 from homeassistant.util.network import is_ipv4_address
+from py_netgear_plus import SwitchModelNotDetectedError
 
 if TYPE_CHECKING:
     from homeassistant.config_entries import ConfigFlowResult
@@ -155,6 +156,8 @@ class NetgearFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
             api = await self.hass.async_add_executor_job(get_api, host, password)
         except CannotLoginError:
             errors["base"] = "config"
+        except SwitchModelNotDetectedError:
+            errors["base"] = "switch_not_detected"
         except requests.exceptions.ConnectTimeout:
             errors["base"] = "timeout"
         except NotImplementedError:
