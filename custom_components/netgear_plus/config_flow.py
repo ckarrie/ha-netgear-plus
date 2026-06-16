@@ -15,7 +15,6 @@ if TYPE_CHECKING:
 from homeassistant.const import CONF_HOST, CONF_PASSWORD, CONF_TIMEOUT
 from homeassistant.core import callback
 from homeassistant.util.network import is_ipv4_address
-from py_netgear_plus import SwitchModelNotDetectedError
 
 if TYPE_CHECKING:
     from homeassistant.config_entries import ConfigFlowResult
@@ -118,7 +117,6 @@ class NetgearFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
     ) -> ConfigFlowResult:
         """Initialize flow from ssdp."""
         updated_data: dict[str, str | int | bool] = {}
-        errors: dict[str, str] = {}
 
         device_url = urlparse(discovery_info.ssdp_location)
         if hostname := device_url.hostname:
@@ -130,24 +128,9 @@ class NetgearFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
 
         _LOGGER.debug("Netgear ssdp discovery info: %s", discovery_info)
 
-        # Open connection to get unique id
-        try:
-            api = await self.hass.async_add_executor_job(
-                get_api,
-                updated_data[CONF_HOST],  # type: ignore[arg-type]
-            )
-        except SwitchModelNotDetectedError:
-            return self.async_abort(reason="switch_not_detected")
-        except requests.exceptions.ConnectTimeout:
-            errors["base"] = "timeout"
-        except NotImplementedError:
-            errors["base"] = "not_implemented_error"
+        self._async_abort_entries_match({CONF_HOST: hostname})
 
-        unique_id = await self.hass.async_add_executor_job(api.get_unique_id)
-        await self.async_set_unique_id(unique_id)
-        self._abort_if_unique_id_configured(updates=updated_data)
-
-        self.placeholders.update(updated_data)  # type: ignore[arg-type]
+        self.placeholders.update(updated_data)
         self.discovered = True
 
         return await self.async_step_user()
