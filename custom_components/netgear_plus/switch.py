@@ -48,7 +48,11 @@ async def async_setup_entry(
 
             entities.append(switch_entity)
 
-    if gs_switch.api and gs_switch.api.ports:
+    if (
+        gs_switch.api
+        and gs_switch.api.ports
+        and gs_switch.api.switch_model.SWITCH_PORT_TEMPLATES
+    ):
         _LOGGER.info(
             "[switch.async_setup_entry] setting up Port switches for %s ports",
             gs_switch.api.ports,
