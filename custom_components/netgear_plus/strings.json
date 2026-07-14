@@ -10,7 +10,9 @@
       }
     },
     "error": {
-      "config": "Connection or login error: please check your configuration"
+      "config": "Connection or login error: please check your configuration",
+      "cannot_resolve": "Cannot resolve host name. Use the switch's IP address, or a fully-qualified name (e.g. host.home).",
+      "cannot_connect": "Cannot connect to the switch. Check the address and that it is reachable."
     },
     "abort": {
       "already_configured": "[%key:common::config_flow::abort::already_configured_device%]",

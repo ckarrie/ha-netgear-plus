@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+import socket
 from typing import TYPE_CHECKING, Any, cast
 from urllib.parse import urlparse
 
@@ -21,10 +22,34 @@ if TYPE_CHECKING:
     from homeassistant.config_entries import ConfigFlowResult
 
 from .const import DEFAULT_CONF_TIMEOUT, DEFAULT_HOST, DOMAIN
-from .errors import CannotLoginError
+from .errors import CannotLoginError, CannotResolveError
 from .netgear_switch import get_api
 
 _LOGGER = logging.getLogger(__name__)
+
+# Home Assistant OS has no local DNS search domain, so a bare single-label
+# host name (e.g. "dining-switch-3") does not resolve. Try these suffixes.
+LOCAL_DOMAIN_SUFFIXES = (".home", ".lan")
+
+
+def _resolve_host(host: str) -> str:
+    """Resolve a host name to an IPv4 address.
+
+    Returns IP addresses unchanged. For a bare single-label name that the
+    system resolver cannot answer, retry with common local domain suffixes
+    appended. Raises CannotResolveError if nothing resolves.
+    """
+    if is_ipv4_address(host):
+        return host
+    candidates = [host]
+    if "." not in host:
+        candidates += [f"{host}{suffix}" for suffix in LOCAL_DOMAIN_SUFFIXES]
+    for candidate in candidates:
+        try:
+            return socket.gethostbyname(candidate)
+        except OSError:  # socket.gaierror is a subclass of OSError
+            continue
+    raise CannotResolveError(host)
 
 
 def _discovery_schema_with_defaults(discovery_info: dict[str, Any]) -> vol.Schema:
@@ -164,6 +189,15 @@ class NetgearFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
         host = user_input.get(CONF_HOST, self.placeholders[CONF_HOST])
         password = user_input[CONF_PASSWORD]
 
+        # Resolve host names to an IP so a bare name (no search domain on
+        # Home Assistant OS) works and connection errors are reported clearly.
+        try:
+            host = await self.hass.async_add_executor_job(_resolve_host, host)
+        except CannotResolveError:
+            return await self._show_setup_form(
+                user_input, {"base": "cannot_resolve"}
+            )
+
         # Open connection and check authentication
         try:
             api = await self.hass.async_add_executor_job(get_api, host, password)
@@ -171,6 +205,8 @@ class NetgearFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
             errors["base"] = "config"
         except requests.exceptions.ConnectTimeout:
             errors["base"] = "timeout"
+        except (requests.exceptions.ConnectionError, OSError):
+            errors["base"] = "cannot_connect"
         except NotImplementedError:
             errors["base"] = "not_implemented_error"
 
