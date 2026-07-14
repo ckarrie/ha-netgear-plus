@@ -10,10 +10,12 @@
       }
     },
     "error": {
-      "config": "Connection or login error: please check your configuration"
+      "config": "Connection or login error: please check your configuration",
+      "switch_not_detected": "Switch model could not be detected; check the password and switch support"
     },
     "abort": {
       "already_configured": "[%key:common::config_flow::abort::already_configured_device%]",
+      "already_in_progress": "Discovery is already in progress",
       "switch_not_detected": "Switch model could not be detected during SSDP discovery"
     }
   }
