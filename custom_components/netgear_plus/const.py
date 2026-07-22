@@ -7,7 +7,14 @@ from py_netgear_plus import models
 
 DOMAIN = "netgear_plus"
 
-PLATFORMS = [Platform.BINARY_SENSOR, Platform.SENSOR, Platform.SWITCH, Platform.BUTTON]
+PLATFORMS = [
+    Platform.BINARY_SENSOR,
+    Platform.SENSOR,
+    Platform.SWITCH,
+    Platform.BUTTON,
+    Platform.SELECT,
+    Platform.TEXT,
+]
 
 DEFAULT_NAME = "Netgear Plus Switch"
 SCAN_INTERVAL = 10

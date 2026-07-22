@@ -2,16 +2,17 @@
   "domain": "netgear_plus",
   "name": "NETGEAR Plus",
   "codeowners": [
+    "@bakernigel",
     "@ckarrie",
     "@foxey"
   ],
   "config_flow": true,
-  "documentation": "https://github.com/ckarrie/ha-netgear-plus/blob/main/README.md",
+  "documentation": "https://github.com/bakernigel/ha-netgear-plus/blob/main/README.md",
   "iot_class": "local_polling",
-  "issue_tracker": "https://github.com/ckarrie/ha-netgear-plus/issues",
+  "issue_tracker": "https://github.com/bakernigel/ha-netgear-plus/issues",
   "requirements": [
     "lxml>=6.1.0",
-    "py-netgear-plus==0.6.4"
+    "py-netgear-plus @ git+https://github.com/bakernigel/py-netgear-plus.git@v1.0.0"
   ],
   "ssdp": [
     {
@@ -19,5 +20,5 @@
       "deviceType": "urn:schemas-upnp-org:device:InternetGatewayDevice:1"
     }
   ],
-  "version": "0.7.11"
+  "version": "1.0.0"
 }
