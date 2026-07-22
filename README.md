@@ -4,6 +4,19 @@
 
 Due to the renaming of the integration and the repository, HACS gets confused and installs the new version next to the old one instead of replacing the old version. Please remove the old version first before installing the latest release.
 
+## Configuration Features
+
+Supported models (including GS308EP) support:
+
+- Port Name editing
+- Port Speed configuration
+- Flow Control
+- Ingress Rate Limit
+- Egress Rate Limit
+- PoE enable/disable
+- PoE power cycle
+- Clear Port Statistics
+
 ## What it does
 
 Grabs statistical network data from [supported NETGEAR Switches](#supported-and-tested-netgear-modelsproducts-and-firmwares) from the
