@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+from functools import partial
 from abc import abstractmethod
 from typing import TYPE_CHECKING, Any
 
@@ -90,15 +91,32 @@ class HomeAssistantNetgearSwitch:
         return True
 
     async def async_get_switch_infos(self) -> dict[str, Any] | None:
-        """Get switch information asynchronously."""
+        """Get switch information and editable port settings asynchronously."""
         async with self.api_lock:
-            return await self.hass.async_add_executor_job(self.api.get_switch_infos)  # type: ignore[attr-defined]
+            switch_infos = await self.hass.async_add_executor_job(
+                self.api.get_switch_infos
+            )  # type: ignore[attr-defined]
+            if switch_infos is None:
+                return None
 
-    async def async_call_api(self, func: Callable[..., bool], *args: Any) -> bool:
+            if self.api.switch_model.MODEL_NAME == "GS308EP":  # type: ignore[union-attr]
+                port_settings = await self.hass.async_add_executor_job(
+                    self.api.get_port_settings
+                )  # type: ignore[attr-defined]
+                for port, settings in port_settings.items():
+                    for setting, value in settings.items():
+                        switch_infos[f"port_{port}_setting_{setting}"] = value
+
+            return switch_infos
+
+    async def async_call_api(
+        self, func: Callable[..., bool], *args: Any, **kwargs: Any
+    ) -> bool:
         """Call an API write function under lock."""
         async with self.api_lock:
             try:
-                result = await self.hass.async_add_executor_job(func, *args)
+                call = partial(func, *args, **kwargs)
+                result = await self.hass.async_add_executor_job(call)
             except LoginFailedError:
                 _LOGGER.warning(
                     "API call %s failed: session expired and re-login failed",
